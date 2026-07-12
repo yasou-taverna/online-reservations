@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -327,7 +328,7 @@ textarea:focus {
 
       <div class="field">
         <label>טלפון</label>
-        <input id="phone" inputmode="tel" autocomplete="tel" placeholder="+972 50 123 4567">
+        <input id="phone" inputmode="tel" autocomplete="tel" placeholder="7654 623 50 972+">
       </div>
     </div>
 
@@ -505,7 +506,6 @@ function continueToPayment() {
     reservationType: els.reservationType.value,
     depositAmount: (Number(config.depositPerGuest) || 0) * Number(els.guests.value),
     depositPerGuest: Number(config.depositPerGuest) || 0,
-    status: "pending_public",
     source: "public_site",
     agree: true,
     createdAt: new Date().toISOString()
