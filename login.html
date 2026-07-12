@@ -1,0 +1,159 @@
+﻿<!doctype html>
+<html dir="rtl" lang="he">
+
+<head>
+<meta charset="utf-8">
+<title>YASOU – התחברות מנהלת</title>
+
+<style>
+/* ============================
+   צבעים
+============================ */
+:root{
+  --bg:#f6f2ea;
+  --panel:#fffdf8;
+  --panel-strong:#fff6e4;
+  --text:#1f2520;
+  --muted:#6e746d;
+  --line:#ded7ca;
+  --brand:#206c5b;
+  --brand-dark:#12483c;
+  --gold:#d99f2f;
+  --free:#3aa66d;
+  --reserved:#e69828;
+  --occupied:#c9463d;
+  --danger:#c9463d;
+  --shadow:0 16px 40px rgba(39,33,23,.10);
+}
+
+/* ============================
+   בסיס
+============================ */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(120deg, rgba(32,108,91,.08), transparent 36%), var(--bg);
+  color: var(--text);
+  font-family: "Assistant", Arial, sans-serif;
+}
+
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+
+/* ============================
+   כותרת עליונה
+============================ */
+.hero {
+  background: #14361a;
+  border-bottom: 3px solid var(--gold);
+  padding: 8px 20px;
+  text-align: center;
+}
+
+.hero-logo {
+  display: block;
+  width: 240px;
+  max-width: 65%;
+  margin: 0 auto;
+}
+
+.hero-subtitle {
+  margin: 2px 0 0;
+  color: var(--gold);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* התאמה למסכים קטנים */
+@media (max-width: 480px) {
+  .hero { padding: 6px 12px; }
+  .hero-logo { width: 180px; max-width: 75%; }
+  .hero-subtitle { font-size: 14px; }
+}
+
+/* ============================
+   תיבת התחברות
+============================ */
+.login-box {
+  max-width: 520px;
+  margin: 24px auto 60px;
+  padding: 0 14px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 10px 35px rgba(0,0,0,0.18);
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+input {
+  width: 100%;
+  border: 1.5px solid #d5c8b0;
+  border-radius: 9px;
+  background: #fafaf8;
+  padding: 11px 12px;
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: #fff;
+}
+
+button {
+  width: 100%;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 900;
+  font-size: 1rem;
+  box-shadow: 0 4px 14px rgba(31,37,32,.06);
+}
+button:hover {
+  background: var(--brand-dark);
+}
+</style>
+<script type="module" src="auth.js"></script>
+</head>
+<body>
+
+<header class="hero">
+  <img src="assets/images/logo.png" alt="YASOU" class="hero-logo">
+  <p class="hero-subtitle">ניהול ואבטחה</p>
+</header>
+
+<main class="login-box">
+  <div class="card">
+    <h1>טופס התחברות</h1>
+    <p>כניסת מנהלת</p>
+
+    <label>שם משתמש</label>
+    <input id="username" placeholder="שם משתמש" autocomplete="username">
+
+    <label>סיסמה</label>
+    <input id="password" placeholder="סיסמה" type="password" autocomplete="current-password">
+
+    <p id="loginError" style="color:var(--danger); font-weight:700; min-height:1.2em; margin:0 0 10px;"></p>
+
+    <button id="loginBtn">כניסה</button>
+  </div>
+</main>
+
+</body>
+</html>
