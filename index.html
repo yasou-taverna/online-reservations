@@ -1,0 +1,2284 @@
+<!doctype html>
+<html dir="rtl" lang="he">
+
+<head>
+<meta charset="UTF-8" />
+<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+<title>Yasou Taverna | ניהול הזמנות</title>
+<link href="assets/images/icon.ico" rel="icon" type="image/x-icon" />
+<link href="https://fonts.googleapis.com" rel="preconnect" />
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&amp;display=swap" rel="stylesheet" />
+<style type="text/css">
+:root {
+	--bg: #eaf2f8;
+	--panel: #ffffff;
+	--panel-strong: #faf5ea;
+	--text: #1f2520;
+	--muted: #6e746d;
+	--line: #ded7ca;
+	--brand: #003b66;
+	--brand-dark: #003b66;
+	--gold: #faf5ea;
+	--free: #3aa66d;
+	--reserved: #e69828;
+	--occupied: #c9463d;
+	--shadow: 0 16px 40px rgba(39, 33, 23, 0.1);
+}
+* {
+	box-sizing: border-box;
+}
+body {
+	margin: 0;
+	min-height: 100vh;
+	background-color: var(--bg);
+	background-image: url("assets/images/bg-pattern.min.svg");
+	background-size: 420px auto;
+	background-repeat: repeat;
+	background-blend-mode: soft-light;
+	color: var(--text);
+	font-family: "Assistant", system-ui, sans-serif;
+}
+button, input, select, textarea {
+	font: inherit;
+}
+button {
+	cursor: pointer;
+}
+.app-shell {
+	display: grid;
+	grid-template-columns: 260px minmax(0, 1fr);
+	min-height: 100vh;
+}
+.sidebar {
+	position: sticky;
+	top: 0;
+	height: 100vh;
+	padding: 24px 18px;
+	background: #003b66;
+	color: #faf5ea;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+}
+.brand-block {
+    padding: 8px 10px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    text-align: center;
+}
+
+.brand-logo {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.brand-logo img {
+    width: 180px;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.brand-block p {
+    margin: 10px 0 0;
+    color: rgba(255,255,255,0.76);
+    text-align: center;
+    font-weight: 700;
+}
+.nav {
+	display: grid;
+	gap: 8px;
+}
+.nav button {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	border: 0;
+	border-radius: 8px;
+	padding: 12px 14px;
+	background: transparent;
+	color: rgba(255, 255, 255, 0.84);
+	text-align: right;
+	font-weight: 700;
+}
+.nav button.active, .nav button:hover {
+	background: rgba(255, 255, 255, 0.12);
+	color: #fff;
+}
+.nav .icon {
+	width: 26px;
+	text-align: center;
+	color: #fff;
+	font-size: 1.08rem;
+	font-weight: 900;
+}
+.main {
+	padding: 28px;
+	min-width: 0;
+}
+.topbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+.topbar h2 {
+	margin: 0;
+	font-size: clamp(1.7rem, 3vw, 2.45rem);
+	letter-spacing: 0;
+}
+.topbar p {
+	margin: 4px 0 0;
+	color: var(--muted);
+}
+.actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--line);
+	background: var(--panel);
+	color: var(--text);
+	border-radius: 8px;
+	padding: 10px 14px;
+	font-weight: 800;
+	text-decoration: none;
+	box-shadow: 0 4px 14px rgba(31, 37, 32, 0.06);
+}
+.btn.primary {
+	background: var(--brand);
+	color: white;
+	border-color: var(--brand);
+}
+.btn.danger {
+	background: #fff5f3;
+	color: var(--occupied);
+	border-color: #f2c4be;
+}
+.btn.whatsapp {
+	background: #e9fbef;
+	color: #137a3b;
+	border-color: #bfe9cb;
+}
+.grid {
+	display: grid;
+	gap: 16px;
+}
+.daily-summary {
+	display: grid;
+	gap: 16px;
+}
+.summary-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: end;
+	gap: 16px;
+	padding: 18px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: linear-gradient(135deg, rgba(0, 59, 102, 0.12), rgba(250, 245, 234, 0.9)), var(--panel);
+	box-shadow: var(--shadow);
+}
+.summary-head h3 {
+	margin: 2px 0 0;
+	font-size: clamp(1.45rem, 2.4vw, 2rem);
+}
+.eyebrow {
+	color: var(--brand-dark);
+	font-size: 0.86rem;
+	font-weight: 900;
+}
+.summary-date {
+	width: min(240px, 100%);
+}
+.stats {
+	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.stat {
+	background: var(--panel);
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 18px;
+	box-shadow: var(--shadow);
+}
+.rich-stat {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 12px;
+	align-items: center;
+}
+.stat-icon {
+	width: 42px;
+	height: 42px;
+	display: grid;
+	place-items: center;
+	border-radius: 8px;
+	font-size: 1.25rem;
+	background: #eef7f3;
+}
+.stat-icon.blue {
+	background: #e9f2ff;
+}
+.stat-icon.green {
+	background: #e7f7ed;
+}
+.stat-icon.gold {
+	background: #fff5df;
+}
+.stat-icon.red {
+	background: #fff0ed;
+}
+.stat strong {
+	display: block;
+	font-size: 2.1rem;
+	line-height: 1;
+}
+.stat span {
+	color: var(--muted);
+	font-weight: 700;
+}
+.stat small {
+	display: block;
+	margin-top: 4px;
+	color: var(--brand-dark);
+	font-weight: 800;
+}
+.content-grid {
+	grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+	align-items: start;
+}
+.panel {
+	background: rgba(255, 253, 248, 0.92);
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 18px;
+	box-shadow: var(--shadow);
+}
+.panel h3 {
+	margin: 0 0 14px;
+	font-size: 1.25rem;
+}
+.compact-panel h3 {
+	margin-bottom: 10px;
+}
+.summary-split {
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.9fr) minmax(240px, 0.7fr);
+	gap: 16px;
+}
+.timeline {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: minmax(94px, 1fr);
+	gap: 8px;
+	overflow-x: auto;
+	padding-bottom: 4px;
+}
+.slot {
+	min-height: 70px;
+	display: grid;
+	align-content: center;
+	gap: 4px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #f7faf7;
+	color: var(--muted);
+	text-align: center;
+}
+.slot strong {
+	color: var(--text);
+}
+.slot.busy {
+	background: #fff7e8;
+	border-color: #edc36f;
+}
+.slot.high {
+	background: #fff1ed;
+	border-color: #e9a098;
+}
+.slot span {
+	font-size: 0.88rem;
+	font-weight: 800;
+}
+.bar-chart {
+	height: 150px;
+	display: flex;
+	align-items: flex-end;
+	gap: 8px;
+	direction: ltr;
+	padding: 0 4px;
+}
+.bar-item {
+	flex: 1;
+	min-width: 28px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+}
+.bar-item span {
+	color: var(--muted);
+	font-size: 0.74rem;
+	font-weight: 800;
+}
+.bar-item i {
+	width: 100%;
+	display: block;
+	border-radius: 5px 5px 0 0;
+	background: var(--brand);
+	opacity: 0.68;
+	transition: height 0.5s ease var(--delay);
+}
+.bar-item i.active {
+	background: var(--gold);
+	opacity: 1;
+}
+.bar-labels {
+	display: flex;
+	justify-content: space-around;
+	margin-top: 7px;
+	color: var(--muted);
+	font-size: 0.82rem;
+	font-weight: 800;
+}
+.area-breakdown {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+}
+.area-breakdown div {
+	min-height: 70px;
+	display: grid;
+	align-content: center;
+	gap: 2px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fff;
+	text-align: center;
+}
+.area-breakdown span {
+	color: var(--muted);
+	font-weight: 800;
+}
+.area-breakdown strong {
+	font-size: 1.65rem;
+	line-height: 1;
+}
+.panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+.panel-head h3 {
+	margin: 0;
+}
+.mini-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 30px;
+	border-radius: 999px;
+	padding: 5px 10px;
+	background: var(--panel-strong);
+	color: var(--brand-dark);
+	font-size: 0.88rem;
+	font-weight: 900;
+}
+.list {
+	display: grid;
+	gap: 10px;
+}
+.daily-customers {
+	display: grid;
+	gap: 10px;
+}
+.daily-customer {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	gap: 10px;
+	align-items: center;
+	padding: 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fff;
+}
+.customer-initials {
+	width: 40px;
+	height: 40px;
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	background: linear-gradient(135deg, rgba(0, 59, 102, 0.94), rgba(250, 245, 234, 0.9));
+	color: #fff;
+	font-weight: 900;
+}
+.cashier-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 320px;
+	gap: 16px;
+	align-items: start;
+}
+.simple-cashier {
+	grid-template-columns: minmax(320px, 420px);
+}
+.cashier-main {
+	display: grid;
+	gap: 16px;
+}
+.cashier-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: end;
+	gap: 16px;
+}
+.cashier-head h3 {
+	margin: 2px 0 0;
+	font-size: 1.7rem;
+}
+.cashier-stats {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.cashier-side {
+	display: grid;
+	gap: 14px;
+}
+.cashier-total {
+	display: grid;
+	gap: 4px;
+	padding: 16px;
+	border-radius: 8px;
+	background: var(--brand-dark);
+	color: #fff;
+}
+.cashier-total span {
+	color: rgba(255, 255, 255, 0.76);
+	font-weight: 800;
+}
+.cashier-total strong {
+	font-size: 2rem;
+	line-height: 1;
+}
+.compact-date {
+	width: 170px;
+}
+.compact-date label {
+	font-size: 0.82rem;
+}
+.cashier-form {
+	margin: 0;
+}
+.payment-breakdown {
+	display: grid;
+	gap: 8px;
+}
+.payment-field, .check-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 12px;
+	align-items: center;
+	padding: 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fff;
+}
+.payment-field span, .cashier-note {
+	color: var(--muted);
+	font-weight: 800;
+}
+.payment-field input {
+	width: 150px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 9px 11px;
+	background: #fff;
+	color: var(--text);
+	direction: ltr;
+	text-align: left;
+	font-weight: 900;
+}
+.cashier-note {
+	padding-top: 8px;
+	border-top: 1px solid var(--line);
+	font-size: 0.9rem;
+}
+.check-list {
+	display: grid;
+	gap: 10px;
+}
+.check-money {
+	display: grid;
+	justify-items: end;
+	gap: 2px;
+}
+.check-money span {
+	color: var(--muted);
+	font-size: 0.9rem;
+	font-weight: 800;
+}
+.check-money strong {
+	font-size: 1.25rem;
+}
+.reservation-row, .customer-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 12px;
+	align-items: center;
+	padding: 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: #fff;
+}
+.row-title {
+	margin: 0;
+	font-weight: 800;
+}
+.row-meta {
+	color: var(--muted);
+	font-size: 0.95rem;
+}
+.badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 74px;
+	border-radius: 999px;
+	padding: 4px 10px;
+	color: white;
+	font-weight: 800;
+	font-size: 0.88rem;
+}
+.badge.free {
+	background: var(--free);
+}
+.badge.reserved {
+	background: var(--reserved);
+}
+.badge.occupied {
+	background: var(--occupied);
+}
+.badge.waiting {
+	background: var(--brand-dark);
+}
+.filters, .form-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+	margin-bottom: 16px;
+}
+.field {
+	display: grid;
+	gap: 6px;
+}
+.field label {
+	font-weight: 800;
+	color: #3f463f;
+}
+.field input, .field select, .field textarea {
+	width: 100%;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 10px 12px;
+	background: white;
+	color: var(--text);
+}
+.field textarea {
+	min-height: 80px;
+	resize: vertical;
+}
+.wide {
+	grid-column: 1 / -1;
+}
+.map-wrap {
+	overflow-x: auto;
+	padding-bottom: 8px;
+}
+.floor-map {
+	min-width: 980px;
+	display: grid;
+	gap: 0;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	overflow: hidden;
+	background: white;
+}
+.zone {
+	position: relative;
+	min-height: 280px;
+	padding: 72px 42px 34px;
+}
+.zone h3 {
+	position: absolute;
+	top: 20px;
+	left: 0;
+	right: 0;
+	text-align: center;
+	margin: 0;
+	font-size: 2.5rem;
+	letter-spacing: 0;
+}
+.zone.outside {
+	background: #e7f1e2;
+	min-height: 270px;
+}
+.zone.covered {
+	background: #e4f0fb;
+	min-height: 330px;
+}
+.zone.inside {
+	background: #fff1d5;
+	min-height: 440px;
+}
+.tables-layer {
+	position: relative;
+	width: 100%;
+	height: 100%;
+}
+.table-button {
+	--status: var(--free);
+	position: absolute;
+	width: calc(var(--w) * 1px);
+	height: calc(var(--h) * 1px);
+	transform: translate(-50%, -50%);
+	border: 3px solid color-mix(in srgb, var(--status), #17241e 18%);
+	background: color-mix(in srgb, var(--status), white 58%);
+	border-radius: 7px;
+	color: #151515;
+	font-weight: 900;
+	font-size: 1.35rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 8px 18px rgba(0, 0, 0, 0.11);
+}
+.table-button.round {
+	border-radius: 50%;
+}
+.table-button.free {
+	--status: var(--free);
+}
+.table-button.reserved {
+	--status: var(--reserved);
+}
+.table-button.occupied {
+	--status: var(--occupied);
+}
+.table-button::before {
+	content: attr(data-number);
+	position: absolute;
+	top: 50%;
+	right: calc(100% + 10px);
+	transform: translateY(-50%);
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: #f8fbff;
+	border: 2px solid #24475a;
+	color: #e10f1c;
+	display: grid;
+	place-items: center;
+	font-size: 0.88rem;
+	font-weight: 900;
+}
+.legend {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+}
+.legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-weight: 800;
+	color: var(--muted);
+}
+.dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+.dot.free {
+	background: var(--free);
+}
+.dot.reserved {
+	background: var(--reserved);
+}
+.dot.occupied {
+	background: var(--occupied);
+}
+.calendar {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 8px;
+}
+.day-name, .day {
+	min-height: 78px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: white;
+	padding: 8px;
+}
+.day-name {
+	min-height: auto;
+	text-align: center;
+	font-weight: 900;
+	background: var(--brand-dark);
+	color: white;
+}
+.day {
+	text-align: right;
+}
+.day.muted {
+	opacity: 0.38;
+}
+.day.selected {
+	outline: 3px solid rgba(0, 59, 102, 0.24);
+}
+.day-count {
+	margin-top: 8px;
+	display: inline-flex;
+	border-radius: 999px;
+	background: var(--panel-strong);
+	color: var(--brand-dark);
+	padding: 3px 8px;
+	font-weight: 900;
+}
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(22, 25, 22, 0.48);
+	display: grid;
+	place-items: center;
+	padding: 18px;
+	z-index: 20;
+}
+.modal {
+	width: min(760px, 100%);
+	max-height: min(92vh, 900px);
+	overflow: auto;
+	background: var(--panel);
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 30px 80px rgba(0, 0, 0, 0.24);
+}
+.modal-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+.modal-head h3 {
+	margin: 0;
+}
+.empty {
+	color: var(--muted);
+	padding: 18px;
+	text-align: center;
+	border: 1px dashed var(--line);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.58);
+}
+.split-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+.settings-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+.app-shell {
+	grid-template-columns: 1fr;
+}
+.sidebar {
+	position: static;
+	height: auto;
+	padding: 16px;
+}
+.brand-block {
+	padding: 0 4px 12px;
+}
+.brand-logo {
+    text-align:center;
+}
+
+
+
+.nav {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.nav button {
+	justify-content: center;
+	padding: 10px;
+}
+.main {
+	padding: 18px;
+}
+.topbar {
+	flex-direction: column;
+}
+.stats, .content-grid, .summary-split, .cashier-layout, .cashier-stats, .filters, .form-grid, .settings-grid {
+	grid-template-columns: 1fr;
+}
+.summary-head, .cashier-head {
+	align-items: stretch;
+	flex-direction: column;
+}
+.cashier-side {
+	position: static;
+}
+.reservation-row, .customer-row, .daily-customer, .check-row {
+	grid-template-columns: 1fr;
+}
+.check-money {
+	justify-items: start;
+}
+.calendar {
+	gap: 5px;
+}
+.day {
+	min-height: 64px;
+	padding: 6px;
+}
+}
+@media (max-width: 520px) {
+.nav {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.nav button {
+	font-size: 0.92rem;
+}
+.zone h3 {
+	font-size: 2rem;
+}
+}
+</style>
+</head>
+
+<body>
+
+<div id="app">
+    <div class="app-shell">
+      <aside class="sidebar">
+      <div class="brand-block">
+          <div role="img" aria-label="טברנה יאסו רודוס">
+          <img alt="טברנה יאסו רודוס" height="48" src="assets/images/logo.png" width="200">
+          
+            <span>טברנה יאסו רודוס</span>
+</div>
+				<p>ניהול שולחנות והזמנות</p>
+			</div>
+			<nav class="nav">
+				<button class="active" data-view="dashboard"><span class="icon">
+				📊</span><span>דשבורד</span></button>
+				<button class="" data-view="tables"><span class="icon">▦</span><span>שולחנות</span>
+				</button><button class="" data-view="reservations">
+				<span class="icon">📝</span><span>הזמנות</span></button>
+				<button class="" data-view="waitlist"><span class="icon">🕘</span><span>המתנה</span>
+				</button><button class="" data-view="customers">
+				<span class="icon">☏</span><span>לקוחות</span></button>
+				<button class="" data-view="cashier"><span class="icon">💳</span><span>קופה</span>
+				</button><button class="" data-view="calendar">
+				<span class="icon">📅</span><span>לוח שנה</span></button>
+				<button class="" data-view="settings"><span class="icon">⚙️</span><span>הגדרות</span>
+				</button>
+			</nav>
+		</aside>
+      <main class="main">
+        <header class="topbar">
+			<div>
+				<h2>סיכום יומי</h2>
+				<p>תמונת מצב של היום: הזמנות, עומס שעות, שולחנות ורשימת המתנה</p>
+			</div>
+			<div class="actions">
+				<button class="btn primary" data-new-reservation="">הזמנה חדשה
+				</button><button class="btn" data-new-waitlist="">הוספה להמתנה
+				</button></div>
+		</header>
+		<section class="daily-summary">
+			<div class="summary-head">
+				<div>
+					<span class="eyebrow">ניהול יום</span>
+					<h3>29.05.2026</h3>
+				</div>
+				<div class="field summary-date">
+					<label>בחירת תאריך</label>
+					<input data-dashboard-date="" type="date" value="2026-05-29">
+				</div>
+			</div>
+			<div class="grid stats">
+				<div class="stat rich-stat">
+					<div class="stat-icon blue">
+						📅</div>
+					<div>
+						<strong>0</strong> <span>הזמנות היום</span> <small>0 סועדים 
+						מתוכננים</small> </div>
+				</div>
+				<div class="stat rich-stat">
+					<div class="stat-icon green">
+						🍽️</div>
+					<div>
+						<strong>0</strong> <span>שולחנות משוריינים</span> <small>
+						0% תפוסה</small> </div>
+				</div>
+				<div class="stat rich-stat">
+					<div class="stat-icon gold">
+						▦</div>
+					<div>
+						<strong>29</strong> <span>שולחנות פנויים</span> <small>29 
+						שולחנות במערכת</small> </div>
+				</div>
+				<div class="stat rich-stat">
+					<div class="stat-icon red">
+						⏳</div>
+					<div>
+						<strong>1</strong> <span>טעוני טיפול</span> <small>29 שולחנות 
+						פנויים</small> </div>
+				</div>
+				<div class="stat rich-stat">
+					<div class="stat-icon blue">
+						👥</div>
+					<div>
+						<strong>0</strong> <span>לקוחות ביום</span> <small>9 לקוחות 
+						במאגר</small> </div>
+				</div>
+				<div class="stat rich-stat">
+					<div class="stat-icon gold">
+						🕒</div>
+					<div>
+						<strong>אין</strong> <span>שעת עומס</span> <small>אין הזמנות</small>
+					</div>
+				</div>
+			</div>
+			<div class="summary-split">
+				<div class="panel compact-panel">
+					<h3>עומס שעות</h3>
+					<div class="timeline">
+						<div class="slot ">
+							<strong>15:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>16:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>17:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>18:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>19:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>20:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>21:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>22:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>23:00</strong> <span>פנוי</span> </div>
+						<div class="slot ">
+							<strong>24:00</strong> <span>פנוי</span> </div>
+					</div>
+				</div>
+				<div class="panel compact-panel">
+					<h3>הכנסות שבועיות (€ )</h3>
+					<div class="bar-chart">
+						<div class="bar-item">
+							<span>€ 0</span>
+							<i class="" style="height: 8px; --delay: 0ms"></i>
+						</div>
+						<div class="bar-item">
+							<span>€ 0</span>
+							<i class="" style="height: 8px; --delay: 60ms"></i>
+						</div>
+						<div class="bar-item">
+							<span>€ 0</span>
+							<i class="" style="height: 8px; --delay: 120ms"></i>
+						</div>
+						<div class="bar-item">
+							<span>€ 1k</span>
+							<i class="" style="height: 128px; --delay: 180ms">
+							</i></div>
+						<div class="bar-item">
+							<span>€ 0</span>
+							<i class="" style="height: 8px; --delay: 240ms"></i>
+						</div>
+						<div class="bar-item">
+							<span>€ 0</span>
+							<i class="active" style="height: 8px; --delay: 300ms">
+							</i></div>
+						<div class="bar-item">
+							<span>€ 0</span>
+							<i class="" style="height: 8px; --delay: 360ms"></i>
+						</div>
+					</div>
+					<div class="bar-labels">
+						<span>א׳</span><span>ב׳</span><span>ג׳</span><span>ד׳</span><span>ה׳</span><span>ו׳</span><span>ש׳</span></div>
+				</div>
+				<div class="panel compact-panel">
+					<h3>חלוקה לפי מתחם</h3>
+					<div class="area-breakdown">
+						<div>
+							<span>פנימי</span> <strong>0</strong> </div>
+						<div>
+							<span>חיצוני</span> <strong>0</strong> </div>
+						<div>
+							<span>מקורה</span> <strong>0</strong> </div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<section class="grid content-grid" style="margin-top: 16px">
+			<div class="panel">
+				<h3>הזמנות ל-29.05.2026</h3>
+				<div class="empty">
+					אין הזמנות להצגה</div>
+			</div>
+			<div class="panel">
+				<div class="panel-head">
+					<h3>לקוחות ליום</h3>
+					<span class="mini-count">0 לקוחות</span> </div>
+				<div class="empty">
+					אין לקוחות ליום הנבחר</div>
+			</div>
+		</section>
+  
+      </main>
+    </div>
+</div>
+<script>
+    
+    const STORAGE_KEY = "yasou-taverna-spa-v1";
+    const SHEETS_URL = "https://script.google.com/macros/s/AKfycbxyO_9GaWnOSnCB2GDcjBp2q6CwF8-nvyhSjjShEWoidM-PLDSV0hHZI09_cNUbkWS2JQ/exec";
+
+    // ─── Google Sheets sync ──────────────────────────────
+    async function syncToSheets(action, payload) {
+      try {
+        // no-cors: POST works, but response is opaque (that's OK for fire-and-forget)
+        await fetch(SHEETS_URL + "?action=" + action, {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify(payload)
+        });
+      } catch(e) { console.warn("Sheets sync:", e); }
+    }
+
+    function normalizeSheetDate(value) {
+      if (!value) return "";
+      const raw = String(value);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return raw.slice(0, 10);
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Athens",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).format(d);
+    }
+
+    function normalizeSheetTime(value) {
+      if (!value) return "";
+      const raw = String(value);
+      const hhmm = raw.match(/^(\d{1,2}):(\d{2})/);
+      if (hhmm) return `${hhmm[1].padStart(2, "0")}:${hhmm[2]}`;
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return raw;
+      return new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Athens",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(d);
+    }
+
+    async function pullFromSheets() {
+      try {
+        const response = await fetch(
+          SHEETS_URL + "?action=getreservations&_=" + Date.now(),
+          { method: "GET", cache: "no-store", redirect: "follow" }
+        );
+
+        if (!response.ok) throw new Error(`API error ${response.status}`);
+
+        const data = await response.json();
+        if (!data || data.ok !== true || !Array.isArray(data.reservations)) {
+          throw new Error("Invalid API response");
+        }
+
+        const sheetRes = data.reservations.map(r => ({
+          id:               String(r.id || ""),
+          customerName:     String(r.customerName || ""),
+          phone:            String(r.phone || ""),
+          date:             normalizeSheetDate(r.date),
+          time:             normalizeSheetTime(r.time),
+          guests:           Number(r.guests) || 0,
+          tableId:          Number(r.tableId) || 0,
+          status:           String(r.status || "active"),
+          notes:            String(r.notes || ""),
+          createdAt:        String(r.createdAt || new Date().toISOString()),
+          zone:             String(r.zone || ""),
+          reservationType:  String(r.reservationType || "private"),
+          depositAmount:    Number(r.depositAmount) || 0,
+          receiptUrl:       String(r.receiptUrl || ""),
+          agree:            String(r.agree || ""),
+          source:           String(r.source || ""),
+          fromSheets:       true
+        })).filter(r => r.id);
+
+        const sheetById = new Map(sheetRes.map(r => [r.id, r]));
+        const localOnly = state.reservations.filter(r => !sheetById.has(String(r.id || "")));
+        state.reservations = [...localOnly, ...sheetRes];
+        saveState();
+        render();
+        console.info(`נטענו ${sheetRes.length} הזמנות מה-API`);
+      } catch(e) {
+        console.error("Pull from Sheets failed:", e);
+      }
+    }
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+const uid = () => {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const tableBlueprint = [
+  { id: 1, seats: 4, zone: "inside", x: 10, y: 80, w: 74, h: 58 },
+  { id: 2, seats: 4, zone: "inside", x: 10, y: 58, w: 74, h: 58 },
+  { id: 3, seats: 4, zone: "inside", x: 10, y: 36, w: 74, h: 58 },
+  { id: 4, seats: 4, zone: "inside", x: 10, y: 14, w: 74, h: 58 },
+  { id: 5, seats: 4, zone: "inside", x: 34, y: 58, w: 74, h: 58 },
+  { id: 6, seats: 4, zone: "inside", x: 34, y: 36, w: 74, h: 58 },
+  { id: 7, seats: 6, zone: "inside", x: 34, y: 15, w: 112, h: 54 },
+  { id: 8, seats: 2, zone: "inside", x: 56, y: 58, w: 58, h: 58 },
+  { id: 9, seats: 4, zone: "inside", x: 56, y: 36, w: 74, h: 58 },
+  { id: 10, seats: 4, zone: "inside", x: 56, y: 14, w: 74, h: 58 },
+  { id: 11, seats: 4, zone: "inside", x: 78, y: 80, w: 74, h: 58 },
+  { id: 12, seats: 4, zone: "inside", x: 78, y: 58, w: 74, h: 58 },
+  { id: 13, seats: 4, zone: "inside", x: 78, y: 36, w: 74, h: 58 },
+  { id: 14, seats: 4, zone: "inside", x: 78, y: 14, w: 74, h: 58 },
+  { id: 15, seats: 2, zone: "inside", x: 94, y: 58, w: 58, h: 58 },
+  { id: 16, seats: 2, zone: "inside", x: 94, y: 36, w: 58, h: 58 },
+  { id: 17, seats: 2, zone: "inside", x: 94, y: 14, w: 58, h: 58 },
+  { id: 18, seats: 6, zone: "covered", x: 12, y: 58, w: 90, h: 70 },
+  { id: 19, seats: 10, zone: "covered", x: 50, y: 63, w: 132, h: 132, round: true },
+  { id: 20, seats: 6, zone: "covered", x: 88, y: 58, w: 90, h: 70 },
+  { id: 21, seats: 8, zone: "covered", x: 13, y: 25, w: 142, h: 62 },
+  { id: 22, seats: 12, zone: "covered", x: 34, y: 25, w: 190, h: 62 },
+  { id: 23, seats: 12, zone: "covered", x: 66, y: 25, w: 190, h: 62 },
+  { id: 24, seats: 8, zone: "covered", x: 87, y: 25, w: 142, h: 62 },
+  { id: 25, seats: 8, zone: "outside", x: 14, y: 68, w: 142, h: 62 },
+  { id: 26, seats: 8, zone: "outside", x: 14, y: 32, w: 142, h: 62 },
+  { id: 27, seats: 8, zone: "outside", x: 50, y: 50, w: 142, h: 62 },
+  { id: 28, seats: 8, zone: "outside", x: 86, y: 68, w: 142, h: 62 },
+  { id: 29, seats: 8, zone: "outside", x: 86, y: 32, w: 142, h: 62 },
+  { id: 30, seats: 4, zone: "inside", x: 22, y: 80, w: 74, h: 58 },
+];
+
+const defaultState = {
+  activeView: "dashboard",
+  selectedDate: todayIso(),
+  calendarMonth: todayIso().slice(0, 7),
+  reservationFilter: todayIso(),
+  customerSearch: "",
+  cashierPayments: {},
+  modal: null,
+  settings: {
+    restaurantName: "טברנה יאסו רודוס",
+    tableCount: 29,
+    openTime: "12:00",
+    closeTime: "23:30",
+  },
+  reservations: [
+    {
+      id: uid(),
+      customerName: "דני כהן",
+      phone: "054-555-0188",
+      date: todayIso(),
+      time: "19:30",
+      guests: 4,
+      tableId: 7,
+      status: "reserved",
+      notes: "מבקש ליד החלון",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: uid(),
+      customerName: "אבישג לוי",
+      phone: "+30 698 189 9433",
+      date: todayIso(),
+      time: "20:00",
+      guests: 2,
+      tableId: 16,
+      status: "occupied",
+      notes: "",
+      createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+    },
+  ],
+  waitlist: [],
+};
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const next = saved ? {
+      ...defaultState,
+      ...saved,
+      settings: { ...defaultState.settings, ...saved.settings },
+      cashierPayments: { ...defaultState.cashierPayments, ...saved.cashierPayments },
+    } : structuredClone(defaultState);
+    if (!Array.isArray(next.reservations)) next.reservations = [];
+    if (!Array.isArray(next.waitlist)) next.waitlist = [];
+    return next;
+  } catch {
+    return structuredClone(defaultState);
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function setState(patch) {
+  state = { ...state, ...patch };
+  saveState();
+  render();
+}
+
+function updateSettings(settings) {
+  state.settings = { ...state.settings, ...settings };
+  state.settings.tableCount = Math.max(1, Math.min(30, Number(state.settings.tableCount) || 1));
+  saveState();
+  render();
+}
+
+const app = document.querySelector("#app");
+
+document.addEventListener("click", (event) => {
+  const viewButton = event.target.closest("[data-view]");
+  if (!viewButton) return;
+  event.preventDefault();
+  setState({ activeView: viewButton.dataset.view });
+});
+
+const viewMeta = {
+  dashboard: { title: "סיכום יומי", subtitle: "תמונת מצב של היום: הזמנות, עומס שעות, שולחנות ורשימת המתנה" },
+  tables: { title: "ניהול שולחנות", subtitle: "לחיצה על שולחן פותחת הזמנה חדשה ישירות אליו" },
+  reservations: { title: "מערכת הזמנות", subtitle: "יצירה, עריכה, ביטול וסינון לפי תאריך" },
+  waitlist: { title: "רשימת המתנה", subtitle: "ניהול אורחים שמחכים לשולחן פנוי" },
+  customers: { title: "רשימת לקוחות", subtitle: "מאגר תיירים ישראלים עם פרטי קשר והיסטוריית ביקורים" },
+  cashier: { title: "קופה", subtitle: "סגירת קופה לפי אמצעי תשלום" },
+  calendar: { title: "לוח שנה", subtitle: "תצוגה חודשית עם כמות הזמנות לכל יום" },
+  settings: { title: "הגדרות", subtitle: "שם המסעדה, מספר שולחנות ושעות פתיחה" },
+};
+
+const navItems = [
+  ["dashboard", "📊", "דשבורד"],
+  ["tables", "▦", "שולחנות"],
+  ["reservations", "📝", "הזמנות"],
+  ["waitlist", "🕘", "המתנה"],
+  ["customers", "☏", "לקוחות"],
+  ["cashier", "💳", "קופה"],
+  ["calendar", "📅", "לוח שנה"],
+  ["settings", "⚙️", "הגדרות"],
+];
+
+function getTables() {
+  return tableBlueprint.filter((table) => table.id <= state.settings.tableCount);
+}
+
+function reservationsForDate(date) {
+  return state.reservations
+    .filter((reservation) => reservation.date === date && reservation.status !== "cancelled")
+    .sort((a, b) => a.time.localeCompare(b.time));
+}
+
+function activeWaitlist() {
+  return state.waitlist
+    .filter((item) => item.status === "waiting")
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function normalizePhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("972")) return digits;
+  if (digits.startsWith("0")) return `972${digits.slice(1)}`;
+  return digits;
+}
+
+function whatsappUrl(phone, message) {
+  return `https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(message)}`;
+}
+
+function reservationMessage(reservation) {
+  return `שלום ${reservation.customerName},הזמנתך ב ${state.settings.restaurantName} התקבלה לתאריך ${formatDate(reservation.date)} בשעה ${reservation.time}, שולחן ${reservation.tableId}, ${reservation.guests} סועדים.\nנא לשלוח ביט על סך ₪100 לאדם על מנת לקבל אישור הגעה מסודר.`;
+}
+
+function waitlistMessage(item) {
+  return `שלום ${item.customerName}, זה ${state.settings.restaurantName}. רצינו לעדכן לגבי רשימת ההמתנה שלך ל-${item.guests} סועדים.`;
+}
+
+function findReservationConflict(reservation) {
+  return state.reservations.find((item) =>
+    item.id !== reservation.id &&
+    item.status !== "cancelled" &&
+    Number(item.tableId) === Number(reservation.tableId) &&
+    item.date === reservation.date &&
+    item.time === reservation.time
+  );
+}
+
+function tableStatus(tableId, date = todayIso()) {
+  const items = reservationsForDate(date).filter((reservation) => Number(reservation.tableId) === Number(tableId));
+  if (items.some((reservation) => reservation.status === "occupied")) return "occupied";
+  if (items.some((reservation) => reservation.status === "reserved" || reservation.status === "pending_public")) return "reserved";
+  return "free";
+}
+
+function statusLabel(status) {
+  return { free: "פנוי", reserved: "שמור", occupied: "תפוס", cancelled: "בוטל", pending_public: "🔔 חדש מהאתר - ממתין לאישור", pending: "ממתין" }[status] || status;
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${date}T12:00:00`));
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function render() {
+  if (!viewMeta[state.activeView]) {
+    state.activeView = "dashboard";
+    saveState();
+  }
+  const meta = viewMeta[state.activeView];
+
+  const pendingPublic = state.reservations.filter(r=>r.status==="pending_public").length;
+  const pendingBanner = pendingPublic ? `<div style="background:linear-gradient(135deg,#faf5ea,#fff); border:1px solid #c8d8e6; border-radius:12px; padding:14px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 6px 18px rgba(0,0,0,.06)"><div><strong>🔔 ${pendingPublic} הזמנות חדשות מהאתר ממתינות לאישור</strong><div style="font-size:.9rem;color:#6e746d;font-weight:600">הלקוחות בחרו רק שעה - המערכת שיבצה אותן נסתר למתחמים לפי לוגיקת המטבח (20:00 מקורה / 20:30 פנימי / 21:00 חיצוני)</div></div><button class="btn primary" onclick="setState({activeView:'reservations', reservationFilter:''})">צפייה ואישור</button></div>` : "";
+
+  app.innerHTML = `
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div role="img" aria-label="${escapeHtml(state.settings.restaurantName)}">
+          <img alt="טברנה יאסו רודוס
+" height="48" src="assets/images/logo.png" width="200" />
+          
+            <span>${escapeHtml(state.settings.restaurantName)}</span>
+          </div>           <p>ניהול שולחנות והזמנות</p>
+        </div>
+        <nav class="nav">
+          ${navItems.map(([key, icon, label]) => `
+            <button class="${state.activeView === key ? "active" : ""}" data-view="${key}">
+              <span class="icon">${icon}</span><span>${label}</span>
+            </button>
+          `).join("")}
+        </nav>
+      </aside>
+      <main class="main">
+        ${pendingBanner}
+        <header class="topbar">
+          <div>
+            <h2>${meta.title}</h2>
+            <p>${meta.subtitle}</p>
+          </div>
+          <div class="actions">
+            <button class="btn primary" data-new-reservation>הזמנה חדשה</button>
+            <button class="btn" data-new-waitlist>הוספה להמתנה</button>
+          </div>
+        </header>
+        ${renderView()}
+      </main>
+    </div>
+    ${state.modal ? renderModal() : ""}
+  `;
+  bindEvents();
+}
+
+function renderView() {
+  if (state.activeView === "dashboard") return renderDashboard();
+  if (state.activeView === "tables") return renderTables();
+  if (state.activeView === "reservations") return renderReservations();
+  if (state.activeView === "waitlist") return renderWaitlist();
+  if (state.activeView === "customers") return renderCustomers();
+  if (state.activeView === "cashier") return renderCashier();
+  if (state.activeView === "calendar") return renderCalendar();
+  return renderSettings();
+}
+
+function renderDashboard() {
+  const summaryDate = state.selectedDate || todayIso();
+  const todays = reservationsForDate(summaryDate);
+  const tables = getTables();
+  const counts = tables.reduce((acc, table) => {
+    acc[tableStatus(table.id, summaryDate)] += 1;
+    return acc;
+  }, { free: 0, reserved: 0, occupied: 0 });
+  const totalGuests = todays.reduce((sum, reservation) => sum + Number(reservation.guests || 0), 0);
+  const uniqueCustomers = new Set(todays.map((reservation) => reservation.phone)).size;
+  const occupiedOrReserved = counts.reserved + counts.occupied;
+  const occupancy = tables.length ? Math.round((occupiedOrReserved / tables.length) * 100) : 0;
+  const peak = getPeakHour(todays);
+  return `
+    <section class="daily-summary">
+      <div class="summary-head">
+        <div>
+          <span class="eyebrow">ניהול יום</span>
+          <h3>${formatDate(summaryDate)}</h3>
+        </div>
+        <div class="field summary-date">
+          <label>בחירת תאריך</label>
+          <input type="date" value="${summaryDate}" data-dashboard-date />
+        </div>
+      </div>
+      <div class="grid stats">
+        ${renderSummaryStat("📅", todays.length, "הזמנות היום", `${totalGuests} סועדים מתוכננים`, "blue")}
+        ${renderSummaryStat("🍽️", occupiedOrReserved, "שולחנות משוריינים", `${occupancy}% תפוסה`, "green")}
+        ${renderSummaryStat("▦", counts.free, "שולחנות פנויים", `${tables.length} שולחנות במערכת`, "gold")}
+        ${renderSummaryStat("⏳", activeWaitlist().length, "טעוני טיפול", `${counts.free} שולחנות פנויים`, "red")}
+        ${renderSummaryStat("👥", uniqueCustomers, "לקוחות ביום", `${buildCustomers().length} לקוחות במאגר`, "blue")}
+        ${renderSummaryStat("🕒", peak, "שעת עומס", todays.length ? "לפי כמות הזמנות" : "אין הזמנות", "gold")}
+      </div>
+      <div class="summary-split">
+        <div class="panel compact-panel">
+          <h3>עומס שעות</h3>
+          ${renderTimeline(todays)}
+        </div>
+        <div class="panel compact-panel">
+          <h3>הכנסות שבועיות (€)</h3>
+          ${renderWeeklyRevenueChart(summaryDate)}
+        </div>
+        <div class="panel compact-panel">
+          <h3>חלוקה לפי מתחם</h3>
+          ${renderAreaBreakdown(todays)}
+        </div>
+      </div>
+    </section>
+    <section class="grid content-grid" style="margin-top:16px">
+      <div class="panel">
+        <h3>הזמנות ל-${formatDate(summaryDate)}</h3>
+        ${renderReservationList(todays)}
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>לקוחות ליום</h3>
+          <span class="mini-count">${uniqueCustomers} לקוחות</span>
+        </div>
+        ${renderDailyCustomers(todays)}
+      </div>
+    </section>
+  `;
+}
+
+function renderSummaryStat(icon, value, label, detail, tone) {
+  return `
+    <div class="stat rich-stat">
+      <div class="stat-icon ${tone}">${icon}</div>
+      <div>
+        <strong>${value}</strong>
+        <span>${label}</span>
+        <small>${detail}</small>
+      </div>
+    </div>
+  `;
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 0 }).format(value);
+}
+
+function getPeakHour(items) {
+  if (!items.length) return "אין";
+  const hours = items.reduce((acc, reservation) => {
+    const hour = reservation.time?.slice(0, 2) || "--";
+    acc[hour] = (acc[hour] || 0) + 1;
+    return acc;
+  }, {});
+  const [hour] = Object.entries(hours).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+  return `${hour}:00`;
+}
+
+function renderTimeline(items) {
+  const counts = items.reduce((acc, reservation) => {
+    const hour = Number(reservation.time?.slice(0, 2));
+    if (!Number.isNaN(hour)) acc[hour] = (acc[hour] || 0) + 1;
+    return acc;
+  }, {});
+  const open = Number(state.settings.openTime.slice(0, 2)) || 12;
+  const close = Number(state.settings.closeTime.slice(0, 2)) || 23;
+  const end = close <= open ? 24 : close;
+  return `<div class="timeline">
+    ${Array.from({ length: end - open + 1 }, (_, index) => open + index).map((hour) => {
+      const count = counts[hour] || 0;
+      const busyClass = count >= 3 ? "high" : count ? "busy" : "";
+      return `<div class="slot ${busyClass}">
+        <strong>${String(hour).padStart(2, "0")}:00</strong>
+        <span>${count ? `${count} הזמנות` : "פנוי"}</span>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+function renderWeeklyRevenueChart(date) {
+  const start = startOfWeek(date);
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const current = new Date(start);
+    current.setDate(start.getDate() + index);
+    return current;
+  });
+  const values = days.map((day) => {
+    const iso = day.toISOString().slice(0, 10);
+    const guests = reservationsForDate(iso).reduce((sum, reservation) => sum + Number(reservation.guests || 0), 0);
+    return guests * 120;
+  });
+  const max = Math.max(...values, 1);
+  const labels = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
+  return `
+    <div class="bar-chart">
+      ${values.map((value, index) => {
+        const height = Math.max(8, Math.round((value / max) * 128));
+        const isSelected = days[index].toISOString().slice(0, 10) === date;
+        return `
+          <div class="bar-item">
+            <span>${formatCompactCurrency(value)}</span>
+            <i class="${isSelected ? "active" : ""}" style="height:${height}px;--delay:${index * 60}ms"></i>
+          </div>
+        `;
+      }).join("")}
+    </div>
+    <div class="bar-labels">${labels.map((label) => `<span>${label}</span>`).join("")}</div>
+  `;
+}
+
+function startOfWeek(date) {
+  const start = new Date(`${date}T12:00:00`);
+  start.setDate(start.getDate() - start.getDay());
+  return start;
+}
+
+function formatCompactCurrency(value) {
+  if (!value) return "€0";
+  if (value >= 1000) return `€${Math.round(value / 1000)}k`;
+  return `€${value}`;
+}
+
+function renderAreaBreakdown(items) {
+  const labels = { inside: "פנימי (20:30)", outside: "חיצוני (21:00)", covered: "מקורה (20:00)" };
+  const byArea = items.reduce((acc, reservation) => {
+    let area = reservation.zone || "";
+    if(!area || !acc.hasOwnProperty(area)){
+      const table = tableBlueprint.find((item) => item.id === Number(reservation.tableId));
+      area = table?.zone || reservation.zone || "inside";
+    }
+    if(!acc.hasOwnProperty(area)) area="inside";
+    acc[area] = (acc[area] || 0) + 1;
+    return acc;
+  }, { inside: 0, outside: 0, covered: 0 });
+  return `<div class="area-breakdown">
+    ${Object.entries(labels).map(([key, label]) => `
+      <div>
+        <span>${label}</span>
+        <strong>${byArea[key] || 0}</strong>
+      </div>
+    `).join("")}
+  </div>`;
+}
+
+function renderDailyCustomers(items) {
+  if (!items.length) return `<div class="empty">אין לקוחות ליום הנבחר</div>`;
+  const customers = new Map();
+  items.forEach((reservation) => {
+    if (!customers.has(reservation.phone)) {
+      customers.set(reservation.phone, {
+        name: reservation.customerName,
+        phone: reservation.phone,
+        reservations: [],
+      });
+    }
+    customers.get(reservation.phone).reservations.push(reservation);
+  });
+  return `<div class="daily-customers">
+    ${[...customers.values()].map((customer) => {
+      const first = customer.reservations[0];
+      const initials = customer.name.split(" ").map((part) => part[0]).join("").slice(0, 2);
+      const totalGuests = customer.reservations.reduce((sum, reservation) => sum + Number(reservation.guests || 0), 0);
+      return `
+        <article class="daily-customer">
+          <div class="customer-initials">${escapeHtml(initials || "י")}</div>
+          <div>
+            <p class="row-title">${escapeHtml(customer.name)}</p>
+            <div class="row-meta">${first.time} · שולחן ${first.tableId} · ${totalGuests} סועדים</div>
+          </div>
+          <span class="badge ${first.status}">${statusLabel(first.status)}</span>
+        </article>
+      `;
+    }).join("")}
+  </div>`;
+}
+
+function renderTables() {
+  return `
+    <section class="panel">
+      <div class="legend">
+        <span><i class="dot free"></i>פנוי</span>
+        <span><i class="dot reserved"></i>שמור</span>
+        <span><i class="dot occupied"></i>תפוס</span>
+      </div>
+      <div class="map-wrap">
+        <div class="floor-map">
+          ${renderZone("outside", "מתחם חיצוני")}
+          ${renderZone("covered", "מתחם מקורה")}
+          ${renderZone("inside", "מתחם פנימי")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderZone(zone, title) {
+  const tables = getTables().filter((table) => table.zone === zone);
+  return `
+    <section class="zone ${zone}">
+      <h3>${title}</h3>
+      <div class="tables-layer">
+        ${tables.map((table) => {
+          const status = tableStatus(table.id);
+          return `
+            <button class="table-button ${status} ${table.round ? "round" : ""}"
+              style="left:${table.x}%;top:${table.y}%;--w:${table.w};--h:${table.h}"
+              data-table-id="${table.id}"
+              data-number="${table.id}"
+              title="שולחן ${table.id}, ${table.seats} מקומות, ${statusLabel(status)}">
+              ${table.seats}
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderReservations() {
+  const filtered = state.reservationFilter
+    ? state.reservations.filter((reservation) => reservation.date === state.reservationFilter)
+    : state.reservations;
+  return `
+    <section class="panel">
+      <div class="filters">
+        <div class="field">
+          <label>סינון לפי תאריך</label>
+          <input type="date" value="${state.reservationFilter}" data-filter-date />
+        </div>
+        <div class="field">
+          <label>תצוגה</label>
+          <select data-filter-mode>
+            <option value="date" ${state.reservationFilter ? "selected" : ""}>תאריך נבחר</option>
+            <option value="all" ${!state.reservationFilter ? "selected" : ""}>כל ההזמנות</option>
+          </select>
+        </div>
+      </div>
+      ${renderReservationList(filtered, true)}
+    </section>
+  `;
+}
+
+function renderWaitlist() {
+  const waiting = activeWaitlist();
+  const done = state.waitlist
+    .filter((item) => item.status !== "waiting")
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .slice(0, 8);
+  return `
+    <section class="grid content-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>ממתינים עכשיו</h3>
+          <button class="btn primary" data-new-waitlist>הוספת לקוח</button>
+        </div>
+        ${waiting.length ? `<div class="list">
+          ${waiting.map((item, index) => renderWaitlistRow(item, index)).join("")}
+        </div>` : `<div class="empty">אין כרגע לקוחות בהמתנה</div>`}
+      </div>
+      <div class="panel">
+        <h3>טופלו לאחרונה</h3>
+        ${done.length ? `<div class="list">${done.map((item) => renderWaitlistRow(item)).join("")}</div>` : `<div class="empty">עוד אין פריטים שטופלו</div>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderWaitlistRow(item, index = null) {
+  const place = index === null ? "" : `<span class="badge waiting">#${index + 1}</span>`;
+  return `
+    <article class="reservation-row">
+      <div>
+        <p class="row-title">${escapeHtml(item.customerName)} ${place}</p>
+        <div class="row-meta">${escapeHtml(item.phone)} · ${item.guests} סועדים · הגיעו ${item.arrivalTime || "עכשיו"}</div>
+        ${item.notes ? `<div class="row-meta">הערות: ${escapeHtml(item.notes)}</div>` : ""}
+      </div>
+      <div class="split-actions">
+        <span class="badge ${item.status === "waiting" ? "reserved" : "free"}">${item.status === "waiting" ? "ממתין" : "טופל"}</span>
+        <a class="btn whatsapp" target="_blank" rel="noopener" href="${whatsappUrl(item.phone, waitlistMessage(item))}">WhatsApp</a>
+        ${item.status === "waiting" ? `
+          <button class="btn primary" data-seat-waitlist="${item.id}">הפוך להזמנה</button>
+          <button class="btn" data-done-waitlist="${item.id}">סומן כטופל</button>
+          <button class="btn danger" data-remove-waitlist="${item.id}">הסרה</button>
+        ` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderReservationList(items, showCancelled = false) {
+  const list = showCancelled ? items : items.filter((item) => item.status !== "cancelled");
+  if (!list.length) return `<div class="empty">אין הזמנות להצגה</div>`;
+  return `<div class="list">
+    ${list.map((reservation) => {
+      const zoneLabel = reservation.zone ? {covered:"מקורה 20:00", inside:"פנימי 20:30", outside:"חיצוני 21:00"}[reservation.zone]||reservation.zone : "";
+      const isPublic = reservation.status === "pending_public" || reservation.source === "public_site";
+      const tableText = Number(reservation.tableId) ? `שולחן ${reservation.tableId}` : `ללא שיבוץ (${zoneLabel||"ממתין"})`;
+      return `
+      <article class="reservation-row" style="${isPublic ? 'border-right:4px solid var(--brand); background:linear-gradient(90deg, rgba(0,59,102,.08), transparent);' : ''}">
+        <div>
+          <p class="row-title">${escapeHtml(reservation.customerName)} · ${tableText} ${isPublic? '🔔' : ''}</p>
+          <div class="row-meta">${formatDate(reservation.date)} בשעה ${reservation.time} · ${reservation.guests} סועדים · ${escapeHtml(reservation.phone)} ${zoneLabel?`· ${zoneLabel}`:""}</div>
+          ${reservation.depositAmount ? `<div class="row-meta">פיקדון: ₪${reservation.depositAmount} ${reservation.receiptUrl?`· <a href="${escapeHtml(reservation.receiptUrl)}" target="_blank" style="color:var(--brand);font-weight:800">צפייה בקבלה</a>`:""}</div>` : ""}
+          ${reservation.notes ? `<div class="row-meta">הערות: ${escapeHtml(reservation.notes)}</div>` : ""}
+        </div>
+        <div class="split-actions">
+          <span class="badge ${reservation.status}">${statusLabel(reservation.status)}</span>
+          ${reservation.status !== "cancelled" ? `<a class="btn whatsapp" target="_blank" rel="noopener" href="${whatsappUrl(reservation.phone, reservationMessage(reservation))}">WhatsApp</a>` : ""}
+          ${isPublic ? `<button class="btn primary" data-approve-public="${reservation.id}">אשר + שבץ שולחן</button>` : ""}
+          <button class="btn" data-edit-reservation="${reservation.id}">עריכה</button>
+          ${reservation.status !== "cancelled" ? `<button class="btn danger" data-cancel-reservation="${reservation.id}">ביטול</button>` : ""}
+        </div>
+      </article>
+    `}).join("")}
+  </div>`;
+}
+
+function renderCustomers() {
+  const query = state.customerSearch.trim();
+  const customers = buildCustomers().filter((customer) => {
+    if (!query) return true;
+    return customer.name.includes(query) || customer.phone.includes(query);
+  });
+  return `
+    <section class="panel">
+      <div class="filters">
+        <div class="field wide">
+          <label>חיפוש לפי שם או טלפון</label>
+          <input type="search" value="${escapeHtml(state.customerSearch)}" placeholder="לדוגמה: דני או 054" data-customer-search />
+        </div>
+      </div>
+      ${customers.length ? `<div class="list">
+        ${customers.map((customer) => `
+          <article class="customer-row">
+            <div>
+              <p class="row-title">${escapeHtml(customer.name)}</p>
+              <div class="row-meta">${escapeHtml(customer.phone)} · ${customer.visits.length} ביקורים</div>
+              <div class="row-meta">${customer.visits.map((visit) => `${formatDate(visit.date)} שולחן ${visit.tableId}`).join(" · ")}</div>
+            </div>
+            <div class="split-actions">
+              <a class="btn whatsapp" target="_blank" rel="noopener" href="${whatsappUrl(customer.phone, `שלום ${customer.name}, זה ${state.settings.restaurantName}.`)}">WhatsApp</a>
+              <button class="btn" data-new-for-customer="${escapeHtml(customer.phone)}">הזמנה חדשה</button>
+            </div>
+          </article>
+        `).join("")}
+      </div>` : `<div class="empty">לא נמצאו לקוחות</div>`}
+    </section>
+  `;
+}
+
+function buildCustomers() {
+  const map = new Map();
+  state.reservations.forEach((reservation) => {
+    if (reservation.status === "cancelled") return;
+    const key = reservation.phone;
+    if (!map.has(key)) map.set(key, { name: reservation.customerName, phone: reservation.phone, visits: [] });
+    map.get(key).visits.push(reservation);
+  });
+  return [...map.values()].sort((a, b) => b.visits.length - a.visits.length);
+}
+
+function renderCashier() {
+  const date = state.selectedDate || todayIso();
+  const payments = getCashierPayments(date);
+  return `
+    <section class="cashier-layout simple-cashier">
+      <aside class="panel cashier-side">
+        <div class="panel-head">
+          <h3>סגירת קופה</h3>
+          <div class="field compact-date">
+            <label>תאריך</label>
+            <input type="date" value="${date}" data-dashboard-date />
+          </div>
+        </div>
+        <form class="cashier-form" data-cashier-form>
+          <div class="payment-breakdown">
+            ${renderPaymentField("credit", "אשראי", payments.credit)}
+            ${renderPaymentField("cash", "מזומן", payments.cash)}
+            ${renderPaymentField("bit", "ביט", payments.bit)}
+          </div>
+        </form>
+        <div class="cashier-total">
+          <span>סה״כ סגירת קופה</span>
+          <strong data-cashier-total>${formatEuro(paymentTotal(payments))}</strong>
+        </div>
+      </aside>
+    </section>
+  `;
+}
+
+function getCashierPayments(date) {
+  return { credit: "", cash: "", bit: "", ...(state.cashierPayments?.[date] || {}) };
+}
+
+function renderPaymentField(key, label, value) {
+  return `
+    <label class="payment-field">
+      <span>${label}</span>
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        inputmode="decimal"
+        placeholder="€0"
+        value="${escapeHtml(value)}"
+        data-cashier-amount="${key}"
+      />
+    </label>
+  `;
+}
+
+function paymentTotal(payments) {
+  return ["credit", "cash", "bit"].reduce((sum, key) => sum + (Number(payments[key]) || 0), 0);
+}
+
+function formatEuro(value) {
+  return new Intl.NumberFormat("he-IL", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(value);
+}
+
+function renderCalendar() {
+  const [year, month] = state.calendarMonth.split("-").map(Number);
+  const first = new Date(year, month - 1, 1);
+  const start = new Date(first);
+  start.setDate(first.getDate() - first.getDay());
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date;
+  });
+  const selected = reservationsForDate(state.selectedDate);
+  return `
+    <section class="grid content-grid">
+      <div class="panel">
+        <div class="filters">
+          <div class="field">
+            <label>חודש</label>
+            <input type="month" value="${state.calendarMonth}" data-calendar-month />
+          </div>
+        </div>
+        <div class="calendar">
+          ${["א", "ב", "ג", "ד", "ה", "ו", "ש"].map((day) => `<div class="day-name">${day}</div>`).join("")}
+          ${days.map((day) => {
+            const iso = day.toISOString().slice(0, 10);
+            const count = reservationsForDate(iso).length;
+            return `
+              <button class="day ${day.getMonth() !== month - 1 ? "muted" : ""} ${iso === state.selectedDate ? "selected" : ""}" data-calendar-day="${iso}">
+                <strong>${day.getDate()}</strong>
+                ${count ? `<span class="day-count">${count} הזמנות</span>` : ""}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+      <div class="panel">
+        <h3>הזמנות ל-${formatDate(state.selectedDate)}</h3>
+        ${renderReservationList(selected)}
+      </div>
+    </section>
+  `;
+}
+
+function renderSettings() {
+  return `
+    <section class="panel">
+      <form data-settings-form>
+        <div class="form-grid settings-grid">
+          <div class="field">
+            <label>שם המסעדה</label>
+            <input name="restaurantName" value="${escapeHtml(state.settings.restaurantName)}" required />
+          </div>
+          <div class="field">
+            <label>מספר שולחנות</label>
+            <input name="tableCount" type="number" min="1" max="30" value="${state.settings.tableCount}" required />
+          </div>
+          <div class="field">
+            <label>שעת פתיחה</label>
+            <input name="openTime" type="time" value="${state.settings.openTime}" required />
+          </div>
+          <div class="field">
+            <label>שעת סגירה</label>
+            <input name="closeTime" type="time" value="${state.settings.closeTime}" required />
+          </div>
+        </div>
+        <button class="btn primary">שמירת הגדרות</button>
+      </form>
+    </section>
+  `;
+}
+
+function renderModal() {
+  if (state.modal.kind === "waitlist") return renderWaitlistModal();
+  const reservation = state.modal.id ? state.reservations.find((item) => item.id === state.modal.id) : null;
+  const data = reservation || {
+    customerName: state.modal.customerName || "",
+    phone: state.modal.phone || "",
+    date: state.modal.date || todayIso(),
+    time: state.modal.time || state.settings.openTime,
+    guests: state.modal.guests || 2,
+    tableId: state.modal.tableId || getTables()[0]?.id || 1,
+    status: state.modal.status || "reserved",
+    notes: state.modal.notes || "",
+  };
+  return `
+    <div class="modal-backdrop" data-close-modal>
+      <section class="modal" role="dialog" aria-modal="true" aria-label="טופס הזמנה" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <h3>${reservation ? "עריכת הזמנה" : "הזמנה חדשה"}</h3>
+          <button class="btn" data-close-modal>סגירה</button>
+        </div>
+        <form data-reservation-form>
+          <input type="hidden" name="id" value="${reservation?.id || ""}" />
+          <div class="form-grid">
+            <div class="field">
+              <label>שם</label>
+              <input name="customerName" value="${escapeHtml(data.customerName)}" required />
+            </div>
+            <div class="field">
+              <label>טלפון</label>
+              <input name="phone" value="${escapeHtml(data.phone)}" required />
+            </div>
+            <div class="field">
+              <label>תאריך</label>
+              <input name="date" type="date" value="${data.date}" required />
+            </div>
+            <div class="field">
+              <label>שעה</label>
+              <input name="time" type="time" value="${data.time}" required />
+            </div>
+            <div class="field">
+              <label>מספר סועדים</label>
+              <input name="guests" type="number" min="1" max="30" value="${data.guests}" required />
+            </div>
+            <div class="field">
+              <label>שולחן</label>
+              <select name="tableId" required>
+                ${getTables().map((table) => `<option value="${table.id}" ${Number(data.tableId) === table.id ? "selected" : ""}>שולחן ${table.id} · ${table.seats} מקומות</option>`).join("")}
+              </select>
+            </div>
+            <div class="field">
+              <label>סטטוס</label>
+              <select name="status" required>
+                <option value="reserved" ${data.status === "reserved" ? "selected" : ""}>שמור</option>
+                <option value="occupied" ${data.status === "occupied" ? "selected" : ""}>תפוס</option>
+              </select>
+            </div>
+            <div class="field wide">
+              <label>הערות</label>
+              <textarea name="notes">${escapeHtml(data.notes)}</textarea>
+            </div>
+          </div>
+          <button class="btn primary">${reservation ? "שמירת שינויים" : "יצירת הזמנה"}</button>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function renderWaitlistModal() {
+  const data = {
+    customerName: "",
+    phone: "",
+    guests: 2,
+    arrivalTime: new Date().toTimeString().slice(0, 5),
+    notes: "",
+    ...state.modal,
+  };
+  return `
+    <div class="modal-backdrop" data-close-modal>
+      <section class="modal" role="dialog" aria-modal="true" aria-label="רשימת המתנה" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <h3>הוספה לרשימת המתנה</h3>
+          <button class="btn" data-close-modal>סגירה</button>
+        </div>
+        <form data-waitlist-form>
+          <div class="form-grid">
+            <div class="field">
+              <label>שם</label>
+              <input name="customerName" value="${escapeHtml(data.customerName)}" required />
+            </div>
+            <div class="field">
+              <label>טלפון</label>
+              <input name="phone" value="${escapeHtml(data.phone)}" required />
+            </div>
+            <div class="field">
+              <label>מספר סועדים</label>
+              <input name="guests" type="number" min="1" max="30" value="${data.guests}" required />
+            </div>
+            <div class="field">
+              <label>שעת הגעה</label>
+              <input name="arrivalTime" type="time" value="${data.arrivalTime}" />
+            </div>
+            <div class="field wide">
+              <label>הערות</label>
+              <textarea name="notes">${escapeHtml(data.notes)}</textarea>
+            </div>
+          </div>
+          <button class="btn primary">הוספה להמתנה</button>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
+function bindEvents() {
+  document.querySelector("[data-new-reservation]")?.addEventListener("click", () => setState({ modal: {} }));
+  document.querySelectorAll("[data-new-waitlist]").forEach((button) => {
+    button.addEventListener("click", () => setState({ modal: { kind: "waitlist" } }));
+  });
+
+  document.querySelectorAll("[data-table-id]").forEach((button) => {
+    button.addEventListener("click", () => setState({ modal: { tableId: Number(button.dataset.tableId), date: todayIso() } }));
+  });
+
+  document.querySelectorAll("[data-edit-reservation]").forEach((button) => {
+    button.addEventListener("click", () => setState({ modal: { id: button.dataset.editReservation } }));
+  });
+
+  document.querySelectorAll("[data-cancel-reservation]").forEach((button) => {
+    button.addEventListener("click", () => cancelReservation(button.dataset.cancelReservation));
+  });
+
+  document.querySelectorAll("[data-approve-public]").forEach((button) => {
+    button.addEventListener("click", () => approvePublicOrder(button.dataset.approvePublic));
+  });
+
+  document.querySelectorAll("[data-close-modal]").forEach((element) => {
+    element.addEventListener("click", () => setState({ modal: null }));
+  });
+
+  document.querySelector("[data-reservation-form]")?.addEventListener("submit", saveReservation);
+  document.querySelector("[data-waitlist-form]")?.addEventListener("submit", saveWaitlist);
+  document.querySelector("[data-settings-form]")?.addEventListener("submit", saveSettings);
+  document.querySelector("[data-filter-date]")?.addEventListener("input", (event) => setState({ reservationFilter: event.target.value }));
+  document.querySelector("[data-filter-mode]")?.addEventListener("change", (event) => setState({ reservationFilter: event.target.value === "all" ? "" : todayIso() }));
+  document.querySelector("[data-print-cashier]")?.addEventListener("click", () => window.print());
+  document.querySelectorAll("[data-cashier-amount]").forEach((input) => {
+    input.addEventListener("input", saveCashierInput);
+  });
+  document.querySelector("[data-dashboard-date]")?.addEventListener("input", (event) => {
+    setState({
+      selectedDate: event.target.value,
+      calendarMonth: event.target.value.slice(0, 7),
+      reservationFilter: event.target.value,
+    });
+  });
+  document.querySelector("[data-customer-search]")?.addEventListener("input", (event) => setState({ customerSearch: event.target.value }));
+  document.querySelector("[data-calendar-month]")?.addEventListener("input", (event) => setState({ calendarMonth: event.target.value }));
+
+  document.querySelectorAll("[data-calendar-day]").forEach((button) => {
+    button.addEventListener("click", () => setState({ selectedDate: button.dataset.calendarDay }));
+  });
+
+  document.querySelectorAll("[data-new-for-customer]").forEach((button) => {
+    const customer = buildCustomers().find((item) => item.phone === button.dataset.newForCustomer);
+    button.addEventListener("click", () => setState({ modal: { customerName: customer.name, phone: customer.phone, date: todayIso() } }));
+  });
+
+  document.querySelectorAll("[data-seat-waitlist]").forEach((button) => {
+    button.addEventListener("click", () => seatWaitlist(button.dataset.seatWaitlist));
+  });
+
+  document.querySelectorAll("[data-done-waitlist]").forEach((button) => {
+    button.addEventListener("click", () => updateWaitlistStatus(button.dataset.doneWaitlist, "seated"));
+  });
+
+  document.querySelectorAll("[data-remove-waitlist]").forEach((button) => {
+    button.addEventListener("click", () => updateWaitlistStatus(button.dataset.removeWaitlist, "removed"));
+  });
+}
+
+function saveCashierInput(event) {
+  const input = event.currentTarget;
+  const date = state.selectedDate || todayIso();
+  const current = getCashierPayments(date);
+  const next = { ...current, [input.dataset.cashierAmount]: input.value };
+  state.cashierPayments = { ...(state.cashierPayments || {}), [date]: next };
+  saveState();
+  document.querySelector("[data-cashier-total]").textContent = formatEuro(paymentTotal(next));
+}
+
+function saveReservation(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const id = form.get("id");
+  const waitlistId = state.modal?.waitlistId;
+  const reservation = {
+    id: id || uid(),
+    customerName: form.get("customerName").trim(),
+    phone: form.get("phone").trim(),
+    date: form.get("date"),
+    time: form.get("time"),
+    guests: Number(form.get("guests")),
+    tableId: Number(form.get("tableId")),
+    status: form.get("status"),
+    notes: form.get("notes").trim(),
+    createdAt: id ? state.reservations.find((item) => item.id === id)?.createdAt || new Date().toISOString() : new Date().toISOString(),
+  };
+  const conflict = findReservationConflict(reservation);
+  if (conflict) {
+    window.alert(`שולחן ${reservation.tableId} כבר משויך להזמנה של ${conflict.customerName} בתאריך ${formatDate(conflict.date)} בשעה ${conflict.time}. בחר שולחן או שעה אחרים.`);
+    return;
+  }
+  state.reservations = id
+    ? state.reservations.map((item) => item.id === id ? reservation : item)
+    : [...state.reservations, reservation];
+  if (waitlistId) {
+    state.waitlist = state.waitlist.map((item) =>
+      item.id === waitlistId ? { ...item, status: "seated", updatedAt: new Date().toISOString() } : item
+    );
+  }
+  state.modal = null;
+  state.reservationFilter = reservation.date;
+  state.selectedDate = reservation.date;
+  state.calendarMonth = reservation.date.slice(0, 7);
+  saveState();
+  render();
+  // Sync to Google Sheets
+  syncToSheets("addReservation", reservation);
+}
+
+function saveWaitlist(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const item = {
+    id: uid(),
+    customerName: form.get("customerName").trim(),
+    phone: form.get("phone").trim(),
+    guests: Number(form.get("guests")),
+    arrivalTime: form.get("arrivalTime"),
+    notes: form.get("notes").trim(),
+    status: "waiting",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  state.waitlist = [...state.waitlist, item];
+  state.modal = null;
+  state.activeView = "waitlist";
+  saveState();
+  render();
+}
+
+function seatWaitlist(id) {
+  const item = state.waitlist.find((entry) => entry.id === id);
+  if (!item) return;
+  setState({
+    modal: {
+      customerName: item.customerName,
+      phone: item.phone,
+      guests: item.guests,
+      date: todayIso(),
+      time: new Date().toTimeString().slice(0, 5),
+      notes: item.notes ? `מרשימת המתנה: ${item.notes}` : "מרשימת המתנה",
+      waitlistId: id,
+    },
+  });
+}
+
+function updateWaitlistStatus(id, status) {
+  state.waitlist = state.waitlist.map((item) =>
+    item.id === id ? { ...item, status, updatedAt: new Date().toISOString() } : item
+  );
+  saveState();
+  render();
+}
+
+function cancelReservation(id) {
+  state.reservations = state.reservations.map((reservation) => reservation.id === id ? { ...reservation, status: "cancelled" } : reservation);
+  saveState();
+  render();
+  // Sync cancellation to Google Sheets
+  syncToSheets("cancelReservation", { id });
+}
+
+function approvePublicOrder(id){
+  const res = state.reservations.find(r=>r.id===id);
+  if(!res) return;
+  // מצא שולחן פנוי לפי zone ומספר סועדים
+  const zone = res.zone || (()=>{
+    const t=res.time||"";
+    if(["20:00","20:05","20:10"].includes(t)) return "covered";
+    if(["20:30","20:35"].includes(t)) return "inside";
+    return "outside";
+  })();
+  const suitable = getTables().filter(t=> t.zone===zone && t.seats >= Number(res.guests||2) )
+    .sort((a,b)=>a.seats-b.seats);
+  let freeTable = null;
+  for(const tbl of suitable){
+    const st = tableStatus(tbl.id, res.date);
+    if(st==="free"){ freeTable = tbl; break; }
+  }
+  if(!freeTable){
+    if(!confirm(`אין שולחן פנוי אוטומטית במתחם ${zone} ל-${res.guests} סועדים בתאריך ${res.date}. לאשר בכל זאת ולשבץ ידנית?`)) return;
+  }
+  const tableId = freeTable ? freeTable.id : (getTables().find(t=>t.zone===zone)?.id || 0);
+  state.reservations = state.reservations.map(r=> r.id===id ? {...r, status:"reserved", tableId, zone } : r);
+  saveState();
+  render();
+  syncToSheets("updatereservationstatus", { id, status:"reserved", tableId, zone });
+  alert(`אושר! שובץ לשולחן ${tableId} במתחם ${zone}. נשלח וואטסאפ ללקוח.`);
+}
+
+function saveSettings(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  updateSettings({
+    restaurantName: form.get("restaurantName").trim() || "Yasou Taverna",
+    tableCount: Number(form.get("tableCount")),
+    openTime: form.get("openTime"),
+    closeTime: form.get("closeTime"),
+  });
+}
+
+render();
+// Pull reservations from Google Sheets on load
+pullFromSheets();
+</script>
+
+</body>
+
+</html>
+
+
+
+
+
+
+
