@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html dir="rtl" lang="he">
 
@@ -1750,7 +1751,7 @@ function renderReservationList(items, showCancelled = false) {
   return `<div class="list">
     ${list.map((reservation) => {
       const zoneLabel = reservation.zone ? {covered:"מקורה 20:00", inside:"פנימי 20:30", outside:"חיצוני 21:00"}[reservation.zone]||reservation.zone : "";
-      const isPublic = reservation.status === "pending_public" || reservation.source === "public_site";
+      const isPublic = reservation.status === "pending_public";
       const tableText = Number(reservation.tableId) ? `שולחן ${reservation.tableId}` : `ללא שיבוץ (${zoneLabel||"ממתין"})`;
       return `
       <article class="reservation-row" style="${isPublic ? 'border-right:4px solid var(--brand); background:linear-gradient(90deg, rgba(0,59,102,.08), transparent);' : ''}">
