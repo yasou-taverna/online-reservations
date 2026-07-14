@@ -1,4 +1,6 @@
 
+
+
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -478,15 +480,21 @@ let receipt = null;
 init();
 
 function init() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  els.date.min = today.toISOString().slice(0, 10);
+  els.date.min = todayDateString();
   els.date.value = els.date.min;
 
   els.continueBtn.addEventListener("click", continueToPayment);
   els.backBtn.addEventListener("click", backToForm);
   els.receiptFile.addEventListener("change", handleReceipt);
   els.submitBtn.addEventListener("click", submitReservation);
+}
+
+function todayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function continueToPayment() {
@@ -531,6 +539,7 @@ function validateForm() {
   if (!els.customerName.value.trim()) return "נא למלא שם מלא.";
   if (!isValidPhone(els.phone.value)) return "נא למלא מספר טלפון תקין כולל קידומת מדינה במידת הצורך.";
   if (!els.date.value) return "נא לבחור תאריך.";
+  if (els.date.value < todayDateString()) return "התאריך שנבחר כבר עבר. נא לבחור תאריך עתידי.";
   if (!els.time.value) return "נא לבחור שעה.";
   if (!els.agree.checked) return "יש לאשר את תנאי ההזמנה והפיקדון.";
   return "";
@@ -653,4 +662,3 @@ function showError(element, message) {
 </script>
 </body>
 </html>
-
