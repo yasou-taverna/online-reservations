@@ -651,19 +651,20 @@ button {
 	height: 100%;
 }
 .table-button {
-	--status: var(--free);
+	--status: #e69828;
 	position: absolute;
 	width: calc(var(--w) * 1px);
 	height: calc(var(--h) * 1px);
 	transform: translate(-50%, -50%);
-	border: 3px solid color-mix(in srgb, var(--status), #17241e 18%);
+	border: 3px solid color-mix(in srgb, #003b66, #17241e 18%);
 	background: color-mix(in srgb, var(--status), white 58%);
 	border-radius: 7px;
 	color: #151515;
 	font-weight: 900;
 	font-size: 1.35rem;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 8px 18px rgba(0, 0, 0, 0.11);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 8px 18px rgba(0, 0, 0, 0.11);
 }
+
 .table-button.round {
 	border-radius: 50%;
 }
