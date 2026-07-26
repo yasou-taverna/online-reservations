@@ -46,12 +46,16 @@ const TABLES = [
   { id: 22, seats: 12, zone: "covered" },
   { id: 23, seats: 12, zone: "covered" },
   { id: 24, seats: 8, zone: "covered" },
-  { id: 25, seats: 8, zone: "outside" },
-  { id: 26, seats: 8, zone: "outside" },
-  { id: 27, seats: 8, zone: "outside" },
-  { id: 28, seats: 8, zone: "outside" },
-  { id: 29, seats: 8, zone: "outside" },
-  { id: 30, seats: 4, zone: "inside" }
+  { id: 25, seats: 6, zone: "outside" },
+  { id: 26, seats: 6, zone: "outside" },
+  { id: 27, seats: 6, zone: "outside" },
+  { id: 28, seats: 6, zone: "outside" },
+  { id: 29, seats: 6, zone: "outside" },
+  { id: 30, seats: 6, zone: "outside" },
+  { id: 31, seats: 6, zone: "outside" },
+  { id: 32, seats: 6, zone: "outside" },
+  { id: 33, seats: 6, zone: "outside" },
+  { id: 34, seats: 6, zone: "outside" }
 ];
 
 function doGet(e) {
