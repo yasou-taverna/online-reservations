@@ -364,15 +364,6 @@ textarea:focus {
         <label>בחרו שעה</label>
         <select id="time">
           <option value="">בחרו שעה</option>
-          <option value="20:00">20:00</option>
-          <option value="20:05">20:05</option>
-          <option value="20:10">20:10</option>
-          <option value="20:30">20:30</option>
-          <option value="20:35">20:35</option>
-          <option value="21:00">21:00</option>
-          <option value="21:05">21:05</option>
-          <option value="21:10">21:10</option>
-          <option value="21:15">21:15</option>
         </select>
       </div>
 
@@ -477,12 +468,18 @@ const els = {
 let draft = null;
 let receipt = null;
 
-init();
-
 function init() {
   els.date.min = todayDateString();
   els.date.value = els.date.min;
+  refreshTimeOptions();
+  checkClosedDay();
+  loadHolidayDates();
 
+  els.date.addEventListener("change", () => {
+    showError(els.errorBox, "");
+    refreshTimeOptions();
+    checkClosedDay();
+  });
   els.continueBtn.addEventListener("click", continueToPayment);
   els.backBtn.addEventListener("click", backToForm);
   els.receiptFile.addEventListener("change", handleReceipt);
@@ -495,6 +492,80 @@ function todayDateString() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+// 0=ראשון, 5=שישי, 6=שבת
+function dayOfWeek(dateValue) {
+  if (!dateValue) return null;
+  const d = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.getDay();
+}
+
+const ALL_TIME_OPTIONS = ["20:00", "20:05", "20:10", "20:30", "20:35", "21:00", "21:05", "21:10", "21:15"];
+// במוצאי שבת המסעדה פותחת רק ב-21:00
+const SATURDAY_TIME_OPTIONS = ALL_TIME_OPTIONS.filter((time) => time >= "21:00");
+
+function timeOptionsForDate(dateValue) {
+  return dayOfWeek(dateValue) === 6 ? SATURDAY_TIME_OPTIONS : ALL_TIME_OPTIONS;
+}
+
+function refreshTimeOptions() {
+  const options = timeOptionsForDate(els.date.value);
+  const currentValue = els.time.value;
+  els.time.innerHTML = `<option value="">בחרו שעה</option>` +
+    options.map((time) => `<option value="${time}">${time}</option>`).join("");
+  els.time.value = options.includes(currentValue) ? currentValue : "";
+}
+
+function isClosedDay(dateValue) {
+  return dayOfWeek(dateValue) === 5; // שישי
+}
+
+// חגי ישראל - נטענים מ-Hebcal (API ציבורי) כדי שלא יצטרכו עדכון ידני כל שנה
+let closedHolidayDates = new Set();
+
+async function loadHolidayDates() {
+  try {
+    const startYear = new Date().getFullYear();
+    const responses = await Promise.all(
+      [startYear, startYear + 1].map((year) =>
+        fetch(`https://www.hebcal.com/hebcal?cfg=json&v=1&maj=on&min=off&mod=off&nx=off&il=on&year=${year}`)
+          .then((r) => r.json())
+          .catch(() => null)
+      )
+    );
+    responses.forEach((data) => {
+      (data?.items || []).forEach((item) => {
+        if (item.yomtov && item.date) {
+          closedHolidayDates.add(String(item.date).slice(0, 10));
+        }
+      });
+    });
+  } catch (error) {
+    console.warn("טעינת חגים נכשלה, בדיקת חגים לא תפעל:", error);
+  } finally {
+    checkClosedDay();
+  }
+}
+
+function closedDayReason(dateValue) {
+  if (isClosedDay(dateValue)) return "המסעדה סגורה בימי שישי. נא לבחור תאריך אחר.";
+  if (closedHolidayDates.has(dateValue)) return "המסעדה סגורה לרגל חג. נא לבחור תאריך אחר.";
+  return "";
+}
+
+function checkClosedDay() {
+  const reason = closedDayReason(els.date.value);
+  if (reason) {
+    showError(els.errorBox, reason);
+    els.continueBtn.disabled = true;
+  } else {
+    els.continueBtn.disabled = false;
+    if (els.errorBox.textContent.startsWith("המסעדה סגורה")) {
+      showError(els.errorBox, "");
+    }
+  }
 }
 
 function continueToPayment() {
@@ -540,6 +611,8 @@ function validateForm() {
   if (!isValidPhone(els.phone.value)) return "נא למלא מספר טלפון תקין כולל קידומת מדינה במידת הצורך.";
   if (!els.date.value) return "נא לבחור תאריך.";
   if (els.date.value < todayDateString()) return "התאריך שנבחר כבר עבר. נא לבחור תאריך עתידי.";
+  const closed = closedDayReason(els.date.value);
+  if (closed) return closed;
   if (!els.time.value) return "נא לבחור שעה.";
   if (!els.agree.checked) return "יש לאשר את תנאי ההזמנה והפיקדון.";
   return "";
@@ -659,6 +732,8 @@ function escapeHtml(value) {
 function showError(element, message) {
   element.textContent = message;
 }
+
+init();
 </script>
 </body>
 </html>
