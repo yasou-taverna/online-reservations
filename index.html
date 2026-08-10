@@ -1348,6 +1348,7 @@ const tableBlueprint = [
   { id: 31, seats: 6, zone: "outside", x: 73, y: 74, w: 90, h: 60 },
   { id: 33, seats: 6, zone: "outside", x: 95, y: 74, w: 90, h: 60 },
 ];
+const MIN_TABLE_COUNT = tableBlueprint.length;
 
 const defaultState = {
   activeView: "dashboard",
@@ -1405,6 +1406,7 @@ function loadState() {
     } : structuredClone(defaultState);
     if (!Array.isArray(next.reservations)) next.reservations = [];
     if (!Array.isArray(next.waitlist)) next.waitlist = [];
+    next.settings.tableCount = Math.max(MIN_TABLE_COUNT, Number(next.settings.tableCount) || MIN_TABLE_COUNT);
     return next;
   } catch {
     return structuredClone(defaultState);
@@ -1423,7 +1425,7 @@ function setState(patch) {
 
 function updateSettings(settings) {
   state.settings = { ...state.settings, ...settings };
-  state.settings.tableCount = Math.max(1, Math.min(40, Number(state.settings.tableCount) || 1));
+  state.settings.tableCount = Math.max(MIN_TABLE_COUNT, Math.min(40, Number(state.settings.tableCount) || MIN_TABLE_COUNT));
   saveState();
   render();
 }
@@ -1483,20 +1485,24 @@ function formatReservationTables(reservation) {
   return ids.length === 1 ? `שולחן ${ids[0]}` : `שולחנות ${ids.join("+")}`;
 }
 
-function adjacentTables(tableId) {
+const EVENING_MANUAL_RELEASE_TIME = "20:00";
+const EARLY_RESERVATION_DURATION_MINUTES = 120;
+const RELEASED_STATUSES = ["cancelled", "released", "completed", "no_show", "בוטל", "שוחרר", "הושלם"];
+
+function sameZoneTables(tableId) {
   const table = getTables().find((item) => item.id === Number(tableId));
   if (!table) return [];
   return getTables()
-    .filter((item) => item.zone === table.zone && Math.abs(item.id - table.id) === 1)
+    .filter((item) => item.zone === table.zone && item.id !== table.id)
     .sort((a, b) => a.id - b.id);
 }
 
 function canMergeTables(tableId, mergeTableId) {
-  return adjacentTables(tableId).some((table) => table.id === Number(mergeTableId));
+  return sameZoneTables(tableId).some((table) => table.id === Number(mergeTableId));
 }
 
 function renderMergeTableOptions(tableId, selectedMergeId = 0) {
-  const options = adjacentTables(tableId);
+  const options = sameZoneTables(tableId);
   return `
     <option value="">ללא מיזוג</option>
     ${options.map((table) => `<option value="${table.id}" ${Number(selectedMergeId) === table.id ? "selected" : ""}>שולחן ${table.id} · ${table.seats} מקומות</option>`).join("")}
@@ -1505,7 +1511,7 @@ function renderMergeTableOptions(tableId, selectedMergeId = 0) {
 
 function reservationsForDate(date) {
   return state.reservations
-    .filter((reservation) => reservation.date === date && reservation.status !== "cancelled")
+    .filter((reservation) => reservation.date === date && !isReleasedReservation(reservation))
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
@@ -1544,10 +1550,10 @@ function findReservationConflict(reservation) {
   const nextTableIds = reservationTableIds(reservation);
   return state.reservations.find((item) =>
     item.id !== reservation.id &&
-    item.status !== "cancelled" &&
+    !isReleasedReservation(item) &&
     reservationTableIds(item).some((tableId) => nextTableIds.includes(tableId)) &&
     item.date === reservation.date &&
-    item.time === reservation.time
+    reservationTimesOverlap(reservation, item)
   );
 }
 
@@ -1562,6 +1568,44 @@ function tableReservations(tableId, date = state.selectedDate || todayIso()) {
   return reservationsForDate(date).filter((reservation) => reservationTableIds(reservation).includes(Number(tableId)));
 }
 
+function isTableAvailableForReservation(tableId, reservation) {
+  return !state.reservations.some((item) =>
+    item.id !== reservation.id &&
+    !isReleasedReservation(item) &&
+    item.date === reservation.date &&
+    reservationTableIds(item).includes(Number(tableId)) &&
+    reservationTimesOverlap(reservation, item)
+  );
+}
+
+function isReleasedReservation(reservation) {
+  return RELEASED_STATUSES.includes(String(reservation.status || "").toLowerCase());
+}
+
+function reservationTimesOverlap(nextReservation, existingReservation) {
+  const nextStart = timeToMinutes(nextReservation.time);
+  const existingStart = timeToMinutes(existingReservation.time);
+  if (nextStart === null || existingStart === null) return true;
+
+  const nextEnd = reservationEndMinutes(nextReservation);
+  const existingEnd = reservationEndMinutes(existingReservation);
+  return nextStart < existingEnd && existingStart < nextEnd;
+}
+
+function reservationEndMinutes(reservation) {
+  const start = timeToMinutes(reservation.time);
+  if (start === null) return 24 * 60;
+  return start < timeToMinutes(EVENING_MANUAL_RELEASE_TIME)
+    ? start + EARLY_RESERVATION_DURATION_MINUTES
+    : 24 * 60;
+}
+
+function timeToMinutes(value) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
 function renderTableCustomerTag(reservations) {
   const first = reservations.find((reservation) => String(reservation.customerName || "").trim());
   if (!first) return "";
@@ -1573,8 +1617,28 @@ function renderTableCustomerTag(reservations) {
   `;
 }
 
+function tableDisplaySeats(table, reservations) {
+  const reservation = reservations.find((item) => reservationTableIds(item).includes(Number(table.id)));
+  const guestsForTable = tableGuestsForReservation(reservation, table.id);
+  return guestsForTable || table.seats;
+}
+
+function tableGuestsForReservation(reservation, tableId) {
+  if (!reservation) return 0;
+  const tableIds = reservationTableIds(reservation).sort((a, b) => a - b);
+  const index = tableIds.indexOf(Number(tableId));
+  const guests = Number(reservation.guests || 0);
+  if (index === -1 || !guests) return 0;
+  if (tableIds.length <= 1) return guests;
+
+  const baseGuests = Math.floor(guests / tableIds.length);
+  const extraGuests = guests % tableIds.length;
+  const extraStartsAt = tableIds.length - extraGuests;
+  return baseGuests + (index >= extraStartsAt ? 1 : 0);
+}
+
 function statusLabel(status) {
-  return { free: "פנוי", reserved: "שמור", occupied: "תפוס", cancelled: "בוטל", pending_public: "🔔 חדש מהאתר - ממתין לאישור", pending: "ממתין" }[status] || status;
+  return { free: "פנוי", reserved: "שמור", occupied: "תפוס", released: "שוחרר", cancelled: "בוטל", pending_public: "🔔 חדש מהאתר - ממתין לאישור", pending: "ממתין" }[status] || status;
 }
 
 function formatDate(date) {
@@ -1601,7 +1665,7 @@ function render() {
   const meta = viewMeta[state.activeView];
 
   const pendingPublic = state.reservations.filter(r=>r.status==="pending_public").length;
-  const pendingBanner = pendingPublic ? `<div style="background:linear-gradient(135deg,#faf5ea,#fff); border:1px solid #c8d8e6; border-radius:12px; padding:14px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 6px 18px rgba(0,0,0,.06)"><div><strong>🔔 ${pendingPublic} הזמנות חדשות מהאתר ממתינות לאישור</strong><div style="font-size:.9rem;color:#6e746d;font-weight:600">הלקוחות בחרו רק שעה - המערכת שיבצה אותן נסתר למתחמים לפי לוגיקת המטבח (20:00 מקורה / 20:30 פנימי / 21:00 חיצוני)</div></div><button class="btn primary" onclick="setState({activeView:'reservations', reservationFilter:''})">צפייה ואישור</button></div>` : "";
+  const pendingBanner = pendingPublic ? `<div style="background:linear-gradient(135deg,#faf5ea,#fff); border:1px solid #c8d8e6; border-radius:12px; padding:14px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 6px 18px rgba(0,0,0,.06)"><div><strong>🔔 ${pendingPublic} הזמנות חדשות מהאתר ממתינות לאישור</strong><div style="font-size:.9rem;color:#6e746d;font-weight:600">עד 20:00 שולחן נחסם לשעתיים; מ-20:00 והלאה הוא נשאר תפוס עד שחרור ידני בדשבורד.</div></div><button class="btn primary" onclick="setState({activeView:'reservations', reservationFilter:''})">צפייה ואישור</button></div>` : "";
 
   app.innerHTML = `
     <div class="app-shell">
@@ -1813,7 +1877,7 @@ function formatCompactCurrency(value) {
 }
 
 function renderAreaBreakdown(items) {
-  const labels = { inside: "פנימי (20:30)", outside: "חיצוני (21:00)", covered: "מקורה (20:00)" };
+  const labels = { inside: "פנימי", outside: "חיצוני", covered: "מקורה" };
   const byArea = items.reduce((acc, reservation) => {
     let area = reservation.zone || "";
     if(!area || !acc.hasOwnProperty(area)){
@@ -1903,13 +1967,14 @@ function renderZone(zone, title) {
           const date = state.selectedDate || todayIso();
           const reservations = tableReservations(table.id, date);
           const status = tableStatus(table.id, date);
+          const displaySeats = tableDisplaySeats(table, reservations);
           return `
             <button class="table-button ${status} ${table.round ? "round" : ""}"
               style="left:${table.x}%;top:${table.y}%;--w:${table.w};--h:${table.h}"
               data-table-id="${table.id}"
               data-number="${table.id}"
-              title="שולחן ${table.id}, ${table.seats} מקומות${reservations.length ? `, ${reservations.map((reservation) => reservation.customerName).join(", ")}` : ""}">
-              ${table.seats}
+              title="שולחן ${table.id}, ${displaySeats} סועדים${reservations.length ? `, ${reservations.map((reservation) => reservation.customerName).join(", ")}` : `, ${table.seats} מקומות`}">
+              ${displaySeats}
               ${renderTableCustomerTag(reservations)}
             </button>
           `;
@@ -2004,11 +2069,11 @@ function sortReservationsForWorkList(items) {
 }
 
 function renderReservationList(items) {
-  const list = sortReservationsForWorkList(items.filter((item) => item.status !== "cancelled"));
+  const list = sortReservationsForWorkList(items.filter((item) => !isReleasedReservation(item)));
   if (!list.length) return `<div class="empty">אין הזמנות להצגה</div>`;
   return `<div class="list">
     ${list.map((reservation) => {
-      const zoneLabel = reservation.zone ? {covered:"מקורה 20:00", inside:"פנימי 20:30", outside:"חיצוני 21:00"}[reservation.zone]||reservation.zone : "";
+      const zoneLabel = reservation.zone ? {covered:"מקורה", inside:"פנימי", outside:"חיצוני"}[reservation.zone]||reservation.zone : "";
       const isPublic = reservation.status === "pending_public";
       const tableText = reservationTableIds(reservation).length ? formatReservationTables(reservation) : `ללא שיבוץ (${zoneLabel||"ממתין"})`;
       return `
@@ -2067,7 +2132,7 @@ function renderCustomers() {
 function buildCustomers() {
   const map = new Map();
   state.reservations.forEach((reservation) => {
-    if (reservation.status === "cancelled") return;
+    if (isReleasedReservation(reservation)) return;
     const key = reservation.phone;
     if (!map.has(key)) map.set(key, { name: reservation.customerName, phone: reservation.phone, visits: [] });
     map.get(key).visits.push(reservation);
@@ -2258,7 +2323,7 @@ function renderModal() {
               </select>
             </div>
             <div class="field">
-              <label>מיזוג עם שולחן סמוך</label>
+              <label>מיזוג עם שולחן מאותו מתחם</label>
               <select name="mergeTableId" data-merge-table>
                 ${renderMergeTableOptions(selectedTableId, selectedMergeId)}
               </select>
@@ -2268,6 +2333,7 @@ function renderModal() {
               <select name="status" required>
                 <option value="reserved" ${data.status === "reserved" ? "selected" : ""}>שמור</option>
                 <option value="occupied" ${data.status === "occupied" ? "selected" : ""}>תפוס</option>
+                <option value="released" ${data.status === "released" ? "selected" : ""}>שוחרר / פנוי</option>
               </select>
             </div>
             <div class="field wide">
@@ -2431,7 +2497,7 @@ function saveReservation(event) {
   const tableId = Number(form.get("tableId"));
   const mergeTableId = Number(form.get("mergeTableId")) || 0;
   if (mergeTableId && !canMergeTables(tableId, mergeTableId)) {
-    window.alert("אפשר למזג רק שולחנות סמוכים שנמצאים באותו מתחם.");
+    window.alert("אפשר למזג רק שולחנות שנמצאים באותו מתחם.");
     return;
   }
   const tableIds = mergeTableId ? [tableId, mergeTableId].sort((a, b) => a - b) : [tableId];
@@ -2529,25 +2595,20 @@ function cancelReservation(id) {
 function approvePublicOrder(id){
   const res = state.reservations.find(r=>r.id===id);
   if(!res) return;
-  // מצא שולחן פנוי לפי zone ומספר סועדים
-  const zone = res.zone || (()=>{
-    const t=res.time||"";
-    if(["20:00","20:05","20:10"].includes(t)) return "covered";
-    if(["20:30","20:35"].includes(t)) return "inside";
-    return "outside";
-  })();
-  const suitable = getTables().filter(t=> t.zone===zone && t.seats >= Number(res.guests||2) )
+  const requestedZone = res.zone || "";
+  const suitable = getTables().filter(t=> (!requestedZone || t.zone===requestedZone) && t.seats >= Number(res.guests||2) )
     .sort((a,b)=>a.seats-b.seats);
   let freeTable = null;
   for(const tbl of suitable){
-    const st = tableStatus(tbl.id, res.date);
-    if(st==="free"){ freeTable = tbl; break; }
+    if(isTableAvailableForReservation(tbl.id, res)){ freeTable = tbl; break; }
   }
   if(!freeTable){
-    if(!confirm(`אין שולחן פנוי אוטומטית במתחם ${zone} ל-${res.guests} סועדים בתאריך ${res.date}. לאשר בכל זאת ולשבץ ידנית?`)) return;
+    const zoneText = requestedZone ? ` במתחם ${requestedZone}` : "";
+    if(!confirm(`אין שולחן פנוי אוטומטית${zoneText} ל-${res.guests} סועדים בתאריך ${res.date} בשעה ${res.time}. לאשר בכל זאת ולשבץ ידנית?`)) return;
   }
-  const tableId = freeTable ? freeTable.id : (getTables().find(t=>t.zone===zone)?.id || 0);
+  const tableId = freeTable ? freeTable.id : (suitable[0]?.id || 0);
   const tableIds = tableId ? [tableId] : [];
+  const zone = freeTable?.zone || getTables().find(t=>t.id===tableId)?.zone || requestedZone;
   state.reservations = state.reservations.map(r=> r.id===id ? {...r, status:"reserved", tableId, tableIds, zone } : r);
   saveState();
   render();
