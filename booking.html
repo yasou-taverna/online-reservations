@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -110,6 +111,16 @@ textarea:focus {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.time-row {
+  align-items: end;
+}
+
+.time-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .legal {
@@ -283,6 +294,10 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .time-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .hero {
     padding: 6px 12px;
   }
@@ -354,12 +369,17 @@ textarea:focus {
       </div>
     </div>
 
-    <div class="row">
+    <div class="row time-row">
       <div class="field">
         <label>בחרו שעה</label>
-        <select id="time">
-          <option value="">בחרו שעה</option>
-        </select>
+        <div class="time-fields">
+          <select id="timeHour" aria-label="שעה">
+            <option value="">שעה</option>
+          </select>
+          <select id="timeMinute" aria-label="דקות">
+            <option value="">דקות</option>
+          </select>
+        </div>
       </div>
 
       <div class="field">
@@ -444,7 +464,8 @@ const els = {
   phone: document.querySelector("#phone"),
   date: document.querySelector("#date"),
   guests: document.querySelector("#guests"),
-  time: document.querySelector("#time"),
+  timeHour: document.querySelector("#timeHour"),
+  timeMinute: document.querySelector("#timeMinute"),
   reservationType: document.querySelector("#reservationType"),
   agree: document.querySelector("#agree"),
   continueBtn: document.querySelector("#continueBtn"),
@@ -466,15 +487,16 @@ let receipt = null;
 function init() {
   els.date.min = todayDateString();
   els.date.value = els.date.min;
-  refreshTimeOptions();
+  setupTimeInput();
   checkClosedDay();
   loadHolidayDates();
 
   els.date.addEventListener("change", () => {
     showError(els.errorBox, "");
-    refreshTimeOptions();
+    setupTimeInput();
     checkClosedDay();
   });
+  els.timeHour.addEventListener("change", setupMinuteInput);
   els.continueBtn.addEventListener("click", continueToPayment);
   els.backBtn.addEventListener("click", backToForm);
   els.receiptFile.addEventListener("change", handleReceipt);
@@ -497,20 +519,58 @@ function dayOfWeek(dateValue) {
   return d.getDay();
 }
 
-const ALL_TIME_OPTIONS = ["20:00", "20:05", "20:10", "20:30", "20:35", "21:00", "21:05", "21:10", "21:15"];
-// במוצאי שבת המסעדה פותחת רק ב-21:00
-const SATURDAY_TIME_OPTIONS = ALL_TIME_OPTIONS.filter((time) => time >= "21:00");
+const BOOKING_START_TIME = "16:00";
+const BOOKING_END_TIME = "23:59";
+const SATURDAY_BOOKING_START_TIME = "21:00";
+const SATURDAY_BOOKING_END_TIME = "23:59";
 
-function timeOptionsForDate(dateValue) {
-  return dayOfWeek(dateValue) === 6 ? SATURDAY_TIME_OPTIONS : ALL_TIME_OPTIONS;
+function setupTimeInput() {
+  const isSaturday = dayOfWeek(els.date.value) === 6;
+  const startTime = isSaturday ? SATURDAY_BOOKING_START_TIME : BOOKING_START_TIME;
+  const endTime = isSaturday ? SATURDAY_BOOKING_END_TIME : BOOKING_END_TIME;
+  const currentHour = els.timeHour.value;
+  const startHour = Math.floor(timeToMinutes(startTime) / 60);
+  const endHour = Math.floor(timeToMinutes(endTime) / 60);
+  const hours = [];
+
+  for (let hour = startHour; hour <= endHour; hour += 1) {
+    hours.push(String(hour).padStart(2, "0"));
+  }
+
+  els.timeHour.innerHTML = `<option value="">שעה</option>` +
+    hours.map((hour) => `<option value="${hour}">${displayTime(`${hour}:00`)}</option>`).join("");
+  els.timeHour.value = hours.includes(currentHour) ? currentHour : "";
+  setupMinuteInput();
 }
 
-function refreshTimeOptions() {
-  const options = timeOptionsForDate(els.date.value);
-  const currentValue = els.time.value;
-  els.time.innerHTML = `<option value="">בחרו שעה</option>` +
-    options.map((time) => `<option value="${time}">${time}</option>`).join("");
-  els.time.value = options.includes(currentValue) ? currentValue : "";
+function setupMinuteInput() {
+  const currentMinute = els.timeMinute.value;
+  const minutes = [];
+
+  for (let minute = 0; minute <= 59; minute += 1) {
+    minutes.push(String(minute).padStart(2, "0"));
+  }
+
+  els.timeMinute.innerHTML = `<option value="">דקות</option>` +
+    minutes.map((minute) => `<option value="${minute}">${minute}</option>`).join("");
+  els.timeMinute.value = minutes.includes(currentMinute) ? currentMinute : "";
+}
+
+function selectedTime() {
+  if (!els.timeHour.value || !els.timeMinute.value) return "";
+  return `${els.timeHour.value}:${els.timeMinute.value}`;
+}
+
+function displayTime(time) {
+  const [hourText, minute] = time.split(":");
+  const hour = Number(hourText);
+  const display = hour > 12 ? hour - 12 : hour;
+  return `${display}:${minute}`;
+}
+
+function timeToMinutes(time) {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
 }
 
 function isClosedDay(dateValue) {
@@ -570,12 +630,13 @@ function continueToPayment() {
     return;
   }
 
+  const time = selectedTime();
   draft = {
     id: uid(),
     customerName: els.customerName.value.trim(),
     phone: normalizePhone(els.phone.value),
     date: els.date.value,
-    time: els.time.value,
+    time,
     guests: Number(els.guests.value),
     reservationType: els.reservationType.value,
     depositAmount: (Number(config.depositPerGuest) || 0) * Number(els.guests.value),
@@ -590,7 +651,7 @@ function continueToPayment() {
       <dt>שם</dt><dd>${escapeHtml(draft.customerName)}</dd>
       <dt>טלפון</dt><dd>${escapeHtml(draft.phone)}</dd>
       <dt>תאריך</dt><dd>${formatDate(draft.date)}</dd>
-      <dt>שעה</dt><dd>${escapeHtml(draft.time)}</dd>
+      <dt>שעה</dt><dd>${escapeHtml(displayTime(draft.time))}</dd>
       <dt>סועדים</dt><dd>${draft.guests}</dd>
       <dt>פיקדון</dt><dd>₪${draft.depositAmount} (${draft.depositPerGuest}₪ לאדם)</dd>
     </dl>
@@ -608,7 +669,16 @@ function validateForm() {
   if (els.date.value < todayDateString()) return "התאריך שנבחר כבר עבר. נא לבחור תאריך עתידי.";
   const closed = closedDayReason(els.date.value);
   if (closed) return closed;
-  if (!els.time.value) return "נא לבחור שעה.";
+  const time = selectedTime();
+  if (!time) return "נא לבחור שעה ודקות.";
+  const isSaturday = dayOfWeek(els.date.value) === 6;
+  const minTime = isSaturday ? SATURDAY_BOOKING_START_TIME : BOOKING_START_TIME;
+  const maxTime = isSaturday ? SATURDAY_BOOKING_END_TIME : BOOKING_END_TIME;
+  if (time < minTime || time > maxTime) {
+    return dayOfWeek(els.date.value) === 6
+      ? "במוצאי שבת אפשר להזמין בין 9:00 ל-12:00."
+      : "אפשר להזמין שולחן בין 4:00 ל-12:00.";
+  }
   if (!els.agree.checked) return "יש לאשר את תנאי ההזמנה והפיקדון.";
   return "";
 }
