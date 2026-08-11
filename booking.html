@@ -457,6 +457,8 @@ const config = {
   ...(window.YASOU_CONFIG || {})
 };
 
+const FULLY_BOOKED_MESSAGE = "היום אנחנו כבר בתפוסה מלאה נא נסה תאריך אחר";
+
 const els = {
   stepForm: document.querySelector("#stepForm"),
   stepPayment: document.querySelector("#stepPayment"),
@@ -563,9 +565,7 @@ function selectedTime() {
 
 function displayTime(time) {
   const [hourText, minute] = time.split(":");
-  const hour = Number(hourText);
-  const display = hour > 12 ? hour - 12 : hour;
-  return `${display}:${minute}`;
+  return `${hourText.padStart(2, "0")}:${minute}`;
 }
 
 function timeToMinutes(time) {
@@ -623,7 +623,7 @@ function checkClosedDay() {
   }
 }
 
-function continueToPayment() {
+async function continueToPayment() {
   const validation = validateForm();
   if (validation) {
     showError(els.errorBox, validation);
@@ -631,6 +631,29 @@ function continueToPayment() {
   }
 
   const time = selectedTime();
+  els.continueBtn.disabled = true;
+  els.continueBtn.textContent = "בודק זמינות...";
+
+  try {
+    const availability = await checkAvailability({
+      date: els.date.value,
+      time,
+      guests: Number(els.guests.value),
+      source: "public_site"
+    });
+    if (!availability.ok) {
+      showError(els.errorBox, availability.error || FULLY_BOOKED_MESSAGE);
+      return;
+    }
+  } catch (error) {
+    showError(els.errorBox, "לא הצלחנו לבדוק זמינות. נא לנסות שוב בעוד רגע.");
+    console.warn(error);
+    return;
+  } finally {
+    els.continueBtn.disabled = false;
+    els.continueBtn.textContent = "המשך לתשלום פיקדון";
+  }
+
   draft = {
     id: uid(),
     customerName: els.customerName.value.trim(),
@@ -734,6 +757,19 @@ async function submitReservation() {
   showError(els.paymentErrorBox, "");
 
   try {
+    const availability = await checkAvailability({
+      date: draft.date,
+      time: draft.time,
+      guests: draft.guests,
+      source: "public_site"
+    });
+    if (!availability.ok) {
+      showError(els.paymentErrorBox, availability.error || FULLY_BOOKED_MESSAGE);
+      els.submitBtn.disabled = false;
+      els.submitBtn.textContent = "שליחת ההזמנה";
+      return;
+    }
+
     await postToAppsScript("createPublicReservation", {
       ...draft,
       receipt
@@ -753,6 +789,52 @@ async function postToAppsScript(action, payload) {
     method: "POST",
     mode: "no-cors",
     body: JSON.stringify(payload)
+  });
+}
+
+function checkAvailability(payload) {
+  return jsonpRequest("checkAvailability", payload);
+}
+
+function jsonpRequest(action, payload) {
+  return new Promise((resolve, reject) => {
+    if (!config.appsScriptUrl) {
+      reject(new Error("Missing Apps Script URL"));
+      return;
+    }
+
+    const callbackName = `yasouCallback_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement("script");
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("JSONP request timed out"));
+    }, 12000);
+
+    function cleanup() {
+      window.clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = (response) => {
+      cleanup();
+      resolve(response || {});
+    };
+
+    const params = new URLSearchParams({
+      action,
+      callback: callbackName,
+      ...Object.fromEntries(
+        Object.entries(payload || {}).map(([key, value]) => [key, value == null ? "" : String(value)])
+      )
+    });
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("JSONP request failed"));
+    };
+    script.src = `${config.appsScriptUrl}?${params.toString()}`;
+    document.body.appendChild(script);
   });
 }
 
