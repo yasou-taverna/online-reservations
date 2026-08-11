@@ -808,7 +808,7 @@ function jsonpRequest(action, payload) {
     const timeout = window.setTimeout(() => {
       cleanup();
       reject(new Error("JSONP request timed out"));
-    }, 12000);
+    }, 30000);
 
     function cleanup() {
       window.clearTimeout(timeout);
@@ -821,12 +821,11 @@ function jsonpRequest(action, payload) {
       resolve(response || {});
     };
 
-    const params = new URLSearchParams({
-      action,
-      callback: callbackName,
-      ...Object.fromEntries(
-        Object.entries(payload || {}).map(([key, value]) => [key, value == null ? "" : String(value)])
-      )
+    const params = new URLSearchParams();
+    params.set("action", action);
+    params.set("callback", callbackName);
+    Object.entries(payload || {}).forEach(([key, value]) => {
+      params.set(key, value == null ? "" : String(value));
     });
 
     script.onerror = () => {
