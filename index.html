@@ -573,6 +573,11 @@ button {
 .badge.occupied {
 	background: var(--occupied);
 }
+.badge.pending_public {
+	background: #fff8d8;
+	border: 1px solid #d6a700;
+	color: #3f3200;
+}
 .badge.waiting {
 	background: var(--brand-dark);
 }
@@ -677,6 +682,9 @@ button {
 .table-button.occupied {
 	--status: var(--occupied);
 }
+.table-button.merged {
+	--status: #3ea909;
+}
 .table-button::before {
 	content: attr(data-number);
 	position: absolute;
@@ -758,6 +766,9 @@ button {
 }
 .dot.occupied {
 	background: var(--occupied);
+}
+.dot.merged {
+	background: #3ea909;
 }
 @media print {
 	@page {
@@ -1578,6 +1589,34 @@ function isTableAvailableForReservation(tableId, reservation) {
   );
 }
 
+function findBestAvailableTableIds(reservation) {
+  const guests = Number(reservation.guests || 2);
+  const availableTables = getTables().filter((table) => isTableAvailableForReservation(table.id, reservation));
+  const singleTable = availableTables
+    .filter((table) => table.seats >= guests)
+    .sort((a, b) => a.seats - b.seats || a.id - b.id)[0];
+
+  if (singleTable) return [singleTable.id];
+
+  const pairs = [];
+  availableTables.forEach((first, firstIndex) => {
+    availableTables.slice(firstIndex + 1).forEach((second) => {
+      if (first.zone !== second.zone) return;
+      const totalSeats = first.seats + second.seats;
+      if (totalSeats < guests) return;
+      pairs.push([first, second]);
+    });
+  });
+
+  pairs.sort((a, b) => {
+    const seatsA = a[0].seats + a[1].seats;
+    const seatsB = b[0].seats + b[1].seats;
+    return seatsA - seatsB || Math.max(a[0].seats, a[1].seats) - Math.max(b[0].seats, b[1].seats) || a[0].id - b[0].id;
+  });
+
+  return pairs[0] ? pairs[0].map((table) => table.id) : [];
+}
+
 function isReleasedReservation(reservation) {
   return RELEASED_STATUSES.includes(String(reservation.status || "").toLowerCase());
 }
@@ -1945,6 +1984,7 @@ function renderTables() {
         <span><i class="dot free"></i>פנוי</span>
         <span><i class="dot reserved"></i>שמור</span>
         <span><i class="dot occupied"></i>תפוס</span>
+        <span><i class="dot merged"></i>ממוזג</span>
       </div>
       <div class="map-wrap">
         <div class="floor-map">
@@ -1968,8 +2008,9 @@ function renderZone(zone, title) {
           const reservations = tableReservations(table.id, date);
           const status = tableStatus(table.id, date);
           const displaySeats = tableDisplaySeats(table, reservations);
+          const isMerged = reservations.some((reservation) => reservationTableIds(reservation).length > 1);
           return `
-            <button class="table-button ${status} ${table.round ? "round" : ""}"
+            <button class="table-button ${status} ${isMerged ? "merged" : ""} ${table.round ? "round" : ""}"
               style="left:${table.x}%;top:${table.y}%;--w:${table.w};--h:${table.h}"
               data-table-id="${table.id}"
               data-number="${table.id}"
@@ -2595,25 +2636,17 @@ function cancelReservation(id) {
 function approvePublicOrder(id){
   const res = state.reservations.find(r=>r.id===id);
   if(!res) return;
-  const requestedZone = res.zone || "";
-  const suitable = getTables().filter(t=> (!requestedZone || t.zone===requestedZone) && t.seats >= Number(res.guests||2) )
-    .sort((a,b)=>a.seats-b.seats);
-  let freeTable = null;
-  for(const tbl of suitable){
-    if(isTableAvailableForReservation(tbl.id, res)){ freeTable = tbl; break; }
+  const tableIds = findBestAvailableTableIds(res);
+  if(!tableIds.length){
+    if(!confirm(`אין שולחן פנוי אוטומטית ל-${res.guests} סועדים בתאריך ${res.date} בשעה ${res.time}. לאשר בכל זאת ולשבץ ידנית?`)) return;
   }
-  if(!freeTable){
-    const zoneText = requestedZone ? ` במתחם ${requestedZone}` : "";
-    if(!confirm(`אין שולחן פנוי אוטומטית${zoneText} ל-${res.guests} סועדים בתאריך ${res.date} בשעה ${res.time}. לאשר בכל זאת ולשבץ ידנית?`)) return;
-  }
-  const tableId = freeTable ? freeTable.id : (suitable[0]?.id || 0);
-  const tableIds = tableId ? [tableId] : [];
-  const zone = freeTable?.zone || getTables().find(t=>t.id===tableId)?.zone || requestedZone;
+  const tableId = tableIds[0] || 0;
+  const zone = getTables().find(t=>t.id===tableId)?.zone || "";
   state.reservations = state.reservations.map(r=> r.id===id ? {...r, status:"reserved", tableId, tableIds, zone } : r);
   saveState();
   render();
   syncToSheets("updatereservationstatus", { id, status:"reserved", tableId, tableIds, zone });
-  alert(`אושר! שובץ לשולחן ${tableId} במתחם ${zone}. נשלח וואטסאפ ללקוח.`);
+  alert(`אושר! שובץ ל${tableIds.length > 1 ? `שולחנות ${tableIds.join("+")}` : `שולחן ${tableId}`} במתחם ${zone}. נשלח וואטסאפ ללקוח.`);
 }
 
 function saveSettings(event) {
