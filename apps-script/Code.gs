@@ -1,8 +1,16 @@
 const SHEET_NAME = "Reservations";
 const RECEIPTS_FOLDER_ID = "1eEBcYikjcnHa4p2DI3r0jYjOb-marAPD";
+const BOOKING_START_TIME = "16:00";
+const BOOKING_END_TIME = "23:59";
+const SATURDAY_BOOKING_START_TIME = "21:00";
+const SATURDAY_BOOKING_END_TIME = "23:59";
+const EVENING_MANUAL_RELEASE_TIME = "20:00";
+const EARLY_RESERVATION_DURATION_MINUTES = 120;
+const RELEASED_STATUSES = ["cancelled", "released", "completed", "no_show", "בוטל", "שוחרר", "הושלם"];
+const LOCK_WAIT_MS = 10000;
+const FULLY_BOOKED_MESSAGE = "היום אנחנו כבר בתפוסה מלאה נא נסה תאריך אחר";
 
 const HEADERS = [
-  "id",
   "customerName",
   "phone",
   "date",
@@ -10,16 +18,17 @@ const HEADERS = [
   "guests",
   "tableId",
   "tableIds",
-  "status",
-  "createdAt",
-  "updatedAt",
   "zone",
+  "status",
   "reservationType",
   "depositAmount",
   "receiptUrl",
   "agree",
+  "notes",
   "source",
-  "notes"
+  "createdAt",
+  "updatedAt",
+  "id"
 ];
 
 const TABLES = [
@@ -63,7 +72,7 @@ function doGet(e) {
   e = e || { parameter: {} };
   const action = String(e.parameter.action || "");
   const callback = e.parameter.callback;
-  const payload = handleAction(action, e.parameter || {});
+  const payload = handleActionSafely(action, e.parameter || {});
   const json = JSON.stringify(payload);
 
   if (callback) {
@@ -81,11 +90,31 @@ function doPost(e) {
   e = e || { parameter: {}, postData: { contents: "{}" } };
   const body = parseBody(e);
   const action = String(e.parameter.action || body.action || "");
-  const payload = handleAction(action, body);
+  const payload = handleActionSafely(action, body);
 
   return ContentService
     .createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleActionSafely(action, payload) {
+  const lock = LockService.getScriptLock();
+  const gotLock = lock.tryLock(LOCK_WAIT_MS);
+
+  if (!gotLock) {
+    return { ok: false, error: "המערכת עמוסה כרגע, נסה שוב בעוד כמה שניות." };
+  }
+
+  try {
+    return handleAction(action, payload);
+  } catch (error) {
+    return {
+      ok: false,
+      error: `שגיאה בשרת: ${error && error.message ? error.message : error}`
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function handleAction(action, payload) {
@@ -101,10 +130,19 @@ function handleAction(action, payload) {
     case "backfillTableIds":
     case "backfilltableids":
       return backfillTableIds();
+    case "checkAvailability":
+    case "checkavailability":
+      return checkPublicAvailability(payload);
     case "createPublicReservation":
     case "createpublicreservation":
     case "addReservation":
     case "addreservation":
+      if (String(action).toLowerCase().startsWith("createpublic") || payload.source === "public_site") {
+        const closedReason = closedSlotReason(payload.date, payload.time);
+        if (closedReason) return { ok: false, error: closedReason };
+        const availability = checkPublicAvailability(payload);
+        if (!availability.ok) return availability;
+      }
       return { ok: true, reservation: upsertReservation(normalizeReservation(payload, action)) };
     case "cancelReservation":
       return { ok: true, reservation: updateReservation(payload.id, { status: "cancelled" }) };
@@ -178,7 +216,7 @@ function migrateHeaders(sheet, currentHeaders) {
   const lastColumn = Math.max(sheet.getLastColumn(), HEADERS.length);
   const existingHeaders = currentHeaders.filter(Boolean);
 
-  if (lastRow < 2 || existingHeaders.length === 0) {
+  if (lastRow < 2) {
     sheet.clear();
     sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     sheet.setFrozenRows(1);
@@ -186,10 +224,14 @@ function migrateHeaders(sheet, currentHeaders) {
   }
 
   const oldRows = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
+  const hasNamedHeaders = existingHeaders.length > 0;
   const nextRows = oldRows.map((row) =>
-    HEADERS.map((header) => {
-      const oldIndex = currentHeaders.indexOf(header);
-      return oldIndex >= 0 ? row[oldIndex] : "";
+    HEADERS.map((header, index) => {
+      if (hasNamedHeaders) {
+        const oldIndex = currentHeaders.indexOf(header);
+        return oldIndex >= 0 ? row[oldIndex] : "";
+      }
+      return row[index] !== undefined ? row[index] : "";
     })
   );
 
@@ -263,20 +305,23 @@ function backfillTableIds() {
     if (reservation.tableId || String(reservation.status || "") === "cancelled") return;
 
     const zone = reservation.zone || zoneForTime(reservation.time);
-    const tableId = findAvailableTableId({
+    const tableIds = findAvailableTableIds({
       id: reservation.id,
       date: reservation.date,
       time: reservation.time,
       guests: reservation.guests,
       zone
     });
+    const tableId = tableIds[0] || "";
+    const assignedZone = zone || tableZoneForIds(tableIds) || "";
 
     if (!tableId) return;
 
     const nextReservation = {
       ...reservation,
       tableId,
-      zone,
+      tableIds: tableIds.join("+"),
+      zone: assignedZone,
       status: "reserved",
       updatedAt: new Date().toISOString()
     };
@@ -297,42 +342,64 @@ function getRowsWithIndex() {
   }));
 }
 
+function checkPublicAvailability(payload) {
+  const closedReason = closedSlotReason(payload.date, payload.time);
+  if (closedReason) return { ok: false, error: closedReason };
+
+  const tableIds = findAvailableTableIds({
+    id: payload.id || "",
+    date: payload.date,
+    time: payload.time,
+    guests: payload.guests,
+    zone: ""
+  });
+
+  return tableIds.length
+    ? { ok: true, tableIds: tableIds.join("+") }
+    : { ok: false, error: FULLY_BOOKED_MESSAGE };
+}
+
 function normalizeReservation(payload, action) {
   const now = new Date().toISOString();
   const id = String(payload.id || Utilities.getUuid());
   const normalizedAction = String(action).toLowerCase();
   const isPublicReservation = normalizedAction === "createpublicreservation" || payload.source === "public_site";
   const receiptUrl = payload.receipt ? saveReceipt(payload.receipt, id) : payload.receiptUrl || "";
-  const zone = payload.zone || zoneForTime(payload.time);
-  const assignedTableId = payload.tableId || (
-    isPublicReservation
-      ? findAvailableTableId({
+  const zone = payload.zone || "";
+  const assignedTableIds = normalizeTableIds(payload.tableIds || payload.tableId);
+  const autoTableIds = (
+    !assignedTableIds.length && isPublicReservation
+      ? findAvailableTableIds({
           id,
           date: payload.date,
           time: payload.time,
           guests: payload.guests,
-          zone
+          zone: ""
         })
-      : ""
+      : []
   );
+  const tableIds = assignedTableIds.length ? assignedTableIds : autoTableIds;
+  const assignedTableId = tableIds[0] || "";
+  const assignedZone = isPublicReservation ? tableZoneForIds(tableIds) || "" : zone || tableZoneForIds(tableIds) || "";
+  const hasAssignedTable = tableIds.length > 0;
   const status = isPublicReservation
-    ? (assignedTableId ? "reserved" : "pending_public")
+    ? (hasAssignedTable ? "reserved" : "pending_public")
     : (payload.status || "reserved");
 
   return {
     id,
     customerName: String(payload.customerName || "").trim(),
     phone: String(payload.phone || "").trim(),
-    date: String(payload.date || ""),
-    time: String(payload.time || ""),
+    date: normalizeDateValue(payload.date),
+    time: normalizeTimeValue(payload.time),
     guests: Number(payload.guests) || "",
     tableId: assignedTableId || "",
-    tableIds: normalizeTableIds(payload.tableIds || assignedTableId).join("+"),
+    tableIds: tableIds.join("+"),
     status,
     notes: String(payload.notes || ""),
     createdAt: payload.createdAt || now,
     updatedAt: now,
-    zone,
+    zone: assignedZone,
     reservationType: payload.reservationType || "private",
     depositAmount: Number(payload.depositAmount) || "",
     receiptUrl,
@@ -342,26 +409,92 @@ function normalizeReservation(payload, action) {
 }
 
 function findAvailableTableId(reservation) {
+  return findAvailableTableIds(reservation)[0] || "";
+}
+
+function findAvailableTableIds(reservation) {
   const guests = Number(reservation.guests) || 1;
   const zone = String(reservation.zone || "");
-  const date = normalizeDateValue(reservation.date);
-  const time = normalizeTimeValue(reservation.time);
-  const existing = getReservations();
-  const suitableTables = TABLES
-    .filter((table) => table.zone === zone && table.seats >= guests)
-    .sort((a, b) => a.seats - b.seats || a.id - b.id);
+  const candidateTables = TABLES
+    .filter((table) => !zone || table.zone === zone)
+    .filter((table) => isTableAvailable(table.id, reservation));
 
-  const table = suitableTables.find((candidate) => {
-    return !existing.some((item) =>
-      String(item.id || "") !== String(reservation.id || "") &&
-      normalizeDateValue(item.date) === date &&
-      normalizeTimeValue(item.time) === time &&
-      String(item.status || "") !== "cancelled" &&
-      normalizeTableIds(item.tableIds || item.tableId).indexOf(Number(candidate.id)) >= 0
-    );
+  const singleTable = candidateTables
+    .filter((table) => table.seats >= guests)
+    .sort((a, b) => a.seats - b.seats || a.id - b.id)[0];
+
+  if (singleTable) return [singleTable.id];
+
+  const pair = findAvailableTablePair(candidateTables, guests);
+  return pair ? pair.map((table) => table.id) : [];
+}
+
+function findAvailableTablePair(candidateTables, guests) {
+  const pairs = [];
+
+  candidateTables.forEach((first, firstIndex) => {
+    candidateTables.slice(firstIndex + 1).forEach((second) => {
+      if (first.zone !== second.zone) return;
+      const totalSeats = first.seats + second.seats;
+      if (totalSeats < guests) return;
+      pairs.push([first, second]);
+    });
   });
 
-  return table ? table.id : "";
+  pairs.sort((a, b) => {
+    const seatsA = a[0].seats + a[1].seats;
+    const seatsB = b[0].seats + b[1].seats;
+    return seatsA - seatsB || Math.max(a[0].seats, a[1].seats) - Math.max(b[0].seats, b[1].seats) || a[0].id - b[0].id;
+  });
+
+  return pairs[0] || null;
+}
+
+function isTableAvailable(tableId, reservation) {
+  const date = normalizeDateValue(reservation.date);
+  const existing = getReservations();
+
+  return !existing.some((item) =>
+    String(item.id || "") !== String(reservation.id || "") &&
+    normalizeDateValue(item.date) === date &&
+    !isReleasedReservation(item) &&
+    normalizeTableIds(item.tableIds || item.tableId).indexOf(Number(tableId)) >= 0 &&
+    reservationTimesOverlap(reservation, item)
+  );
+}
+
+function tableZoneForIds(tableIds) {
+  const table = TABLES.find((item) => tableIds.indexOf(item.id) >= 0);
+  return table ? table.zone : "";
+}
+
+function isReleasedReservation(reservation) {
+  return RELEASED_STATUSES.indexOf(String(reservation.status || "").toLowerCase()) >= 0;
+}
+
+function reservationTimesOverlap(nextReservation, existingReservation) {
+  const nextStart = timeToMinutes(nextReservation.time);
+  const existingStart = timeToMinutes(existingReservation.time);
+  if (nextStart === null || existingStart === null) return true;
+
+  const nextEnd = reservationEndMinutes(nextReservation);
+  const existingEnd = reservationEndMinutes(existingReservation);
+  return nextStart < existingEnd && existingStart < nextEnd;
+}
+
+function reservationEndMinutes(reservation) {
+  const start = timeToMinutes(reservation.time);
+  if (start === null) return 24 * 60;
+  return start < timeToMinutes(EVENING_MANUAL_RELEASE_TIME)
+    ? start + EARLY_RESERVATION_DURATION_MINUTES
+    : 24 * 60;
+}
+
+function timeToMinutes(value) {
+  const time = normalizeTimeValue(value);
+  const match = String(time).match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function normalizeTableIds(value) {
@@ -417,10 +550,13 @@ function saveReceipt(receipt, reservationId) {
 }
 
 function rowToReservation(row) {
-  return HEADERS.reduce((reservation, key, index) => {
+  const reservation = HEADERS.reduce((reservation, key, index) => {
     reservation[key] = row[index];
     return reservation;
   }, {});
+  reservation.date = normalizeDateValue(reservation.date);
+  reservation.time = normalizeTimeValue(reservation.time);
+  return reservation;
 }
 
 function parseBody(e) {
@@ -432,7 +568,24 @@ function parseBody(e) {
 }
 
 function zoneForTime(time) {
-  if (["20:00", "20:05", "20:10"].includes(String(time))) return "covered";
-  if (["20:30", "20:35"].includes(String(time))) return "inside";
-  return "outside";
+  return "";
+}
+
+function closedSlotReason(dateValue, timeValue) {
+  const date = normalizeDateValue(dateValue);
+  const time = normalizeTimeValue(timeValue);
+  if (!date || !time) return null;
+
+  const day = new Date(`${date}T12:00:00`).getDay();
+  if (day === 5) return "המסעדה סגורה בימי שישי.";
+
+  if (day === 6) {
+    if (time < SATURDAY_BOOKING_START_TIME) return "במוצאי שבת המסעדה נפתחת מהשעה 21:00.";
+    if (time > SATURDAY_BOOKING_END_TIME) return "אפשר להזמין במוצאי שבת עד חצות.";
+    return null;
+  }
+
+  if (time < BOOKING_START_TIME) return "אפשר להזמין שולחן החל מהשעה 16:00.";
+  if (time > BOOKING_END_TIME) return "אפשר להזמין שולחן דרך האתר עד חצות.";
+  return null;
 }
