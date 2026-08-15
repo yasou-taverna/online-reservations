@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -15,7 +14,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: #eaf2f8;
-  background-image: url("assets/images/bg-pattern.min.svg");
+  background-image: url("images/bg-pattern.min.svg");
   background-size: 420px auto;
   background-repeat: repeat;
   background-blend-mode: soft-light;
@@ -320,7 +319,8 @@ textarea:focus {
 
 <body>
 <header class="hero">
-    <img src="assets/images/logo.png" alt="YASOU" class="hero-logo">
+    <img src="images/L
+      ogo.png" alt="YASOU" class="hero-logo">
 
     <p class="hero-subtitle">
         הזמנת מקום מראש
@@ -646,7 +646,7 @@ async function continueToPayment() {
       return;
     }
   } catch (error) {
-    showError(els.errorBox, "לא הצלחנו לבדוק זמינות. נא לנסות שוב בעוד רגע.");
+    showError(els.errorBox, "עקב פניות רבות המערכת עמוסה כרגע. נא לנסות שוב בעוד כמה שניות.");
     console.warn(error);
     return;
   } finally {
@@ -779,7 +779,7 @@ async function submitReservation() {
   } catch (error) {
     els.submitBtn.disabled = false;
     els.submitBtn.textContent = "שליחת ההזמנה";
-    showError(els.paymentErrorBox, "לא הצלחנו לשלוח את ההזמנה. נא לנסות שוב בעוד רגע.");
+    showError(els.paymentErrorBox, "עקב עומס במערכת ההזמנה לא נשלחה. נא לנסות שוב בעוד רגע.");
     console.warn(error);
   }
 }
