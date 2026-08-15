@@ -138,6 +138,8 @@ function handleAction(action, payload) {
     case "addReservation":
     case "addreservation":
       if (String(action).toLowerCase().startsWith("createpublic") || payload.source === "public_site") {
+        const validationError = validatePublicReservationPayload(payload);
+        if (validationError) return { ok: false, error: validationError };
         const closedReason = closedSlotReason(payload.date, payload.time);
         if (closedReason) return { ok: false, error: closedReason };
         const availability = checkPublicAvailability(payload);
@@ -340,6 +342,19 @@ function getRowsWithIndex() {
     reservation,
     rowNumber: index + 2
   }));
+}
+
+function validatePublicReservationPayload(payload) {
+  if (!payload || typeof payload !== "object") {
+    return "חסרים פרטי הזמנה. נא למלא את הטופס מחדש.";
+  }
+
+  if (!String(payload.customerName || "").trim()) return "חסר שם לקוח.";
+  if (!String(payload.phone || "").trim()) return "חסר מספר טלפון.";
+  if (!normalizeDateValue(payload.date)) return "חסר תאריך הזמנה.";
+  if (!normalizeTimeValue(payload.time)) return "חסרה שעת הזמנה.";
+  if (!(Number(payload.guests) > 0)) return "חסר מספר סועדים.";
+  return "";
 }
 
 function checkPublicAvailability(payload) {
