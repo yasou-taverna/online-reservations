@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ארכיון הזמנות | Yasou Taverna</title>
+<link rel="icon" type="image/x-icon" href="assets/images/icon.ico">
+<style>
+:root {
+  --bg: #eaf2f8;
+  --panel: #ffffff;
+  --panel-strong: #faf5ea;
+  --text: #1f2520;
+  --muted: #6e746d;
+  --line: #ded7ca;
+  --brand: #003b66;
+  --danger: #c9463d;
+  --ok: #137a3b;
+  --shadow: 0 16px 40px rgba(39, 33, 23, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image: url("assets/images/bg-pattern.min.svg");
+  background-size: 420px auto;
+  background-repeat: repeat;
+  background-blend-mode: soft-light;
+  color: var(--text);
+  font-family: Assistant, "Segoe UI", Arial, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 24px 18px;
+  background: var(--brand);
+  color: #faf5ea;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.brand-block {
+  padding: 8px 10px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: center;
+}
+
+.brand-block img {
+  width: 180px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+.brand-block p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-weight: 700;
+}
+
+.nav {
+  display: grid;
+  gap: 8px;
+}
+
+.nav a,
+.nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.84);
+  text-align: right;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.nav a.active,
+.nav a:hover,
+.nav button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.icon {
+  width: 26px;
+  text-align: center;
+  color: #fff;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.main {
+  min-width: 0;
+  padding: 28px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
+}
+
+.topbar p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-height: 42px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(31, 37, 32, 0.06);
+}
+
+.btn.primary {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+
+.btn:disabled {
+  opacity: 0.58;
+  cursor: default;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.stats {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.stat,
+.panel {
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.stat {
+  padding: 18px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 2.1rem;
+  line-height: 1;
+}
+
+.stat span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.panel {
+  margin-top: 16px;
+  padding: 18px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: min(260px, 100%);
+}
+
+.field label {
+  color: #3f463f;
+  font-weight: 800;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--text);
+}
+
+.status {
+  min-height: 44px;
+  display: grid;
+  align-items: center;
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.status.ok {
+  border-color: rgba(19, 122, 59, 0.35);
+  background: #e9fbef;
+  color: var(--ok);
+}
+
+.status.error {
+  border-color: #f2c4be;
+  background: #fff5f3;
+  color: var(--danger);
+}
+
+.archive-list {
+  display: grid;
+  gap: 8px;
+}
+
+.archive-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.archive-row strong {
+  direction: ltr;
+  text-align: left;
+}
+
+.empty {
+  color: var(--muted);
+  padding: 18px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    padding: 16px;
+  }
+
+  .nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .main {
+    padding: 18px;
+  }
+
+  .topbar,
+  .panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand-block">
+      <img alt="טברנה יאסו רודוס" src="assets/images/logo.png">
+      <p>ניהול שולחנות והזמנות</p>
+    </div>
+    <nav class="nav">
+      <a href="index.html"><span class="icon">📊</span><span>דשבורד</span></a>
+      <a class="active" href="archive.html"><span class="icon">▤</span><span>ארכיון</span></a>
+      <a href="https://docs.google.com/spreadsheets/d/1w9nbyQOXoUEnOsOPQ0tejhet3xlhdMRRyZY58UT6XWA/edit?gid=0#gid=0" target="_blank" rel="noopener"><span class="icon">▦</span><span>אקסל</span></a>
+      <button type="button" id="logoutBtn"><span class="icon">↪</span><span>התנתקות</span></button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1>ארכיון הזמנות</h1>
+        <p>ניקוי חודשי לדשבורד ושמירת היסטוריה בלשוניות חודשיות.</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="index.html">חזרה לדשבורד</a>
+        <button class="btn primary" type="button" id="refreshBtn">רענון</button>
+      </div>
+    </header>
+
+    <section class="grid stats">
+      <div class="stat">
+        <strong id="activeCount">-</strong>
+        <span>רשומות פעילות בדשבורד</span>
+      </div>
+      <div class="stat">
+        <strong id="archivedCount">-</strong>
+        <span>רשומות שמורות בארכיון</span>
+      </div>
+      <div class="stat">
+        <strong id="sheetCount">-</strong>
+        <span>לשוניות ארכיון</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>ניקוי חודשי</h2>
+        <div class="field">
+          <label for="cutoffDate">להעביר לארכיון הזמנות לפני</label>
+          <input id="cutoffDate" type="date">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="button" id="archiveBtn">העבר לארכיון עכשיו</button>
+        <button class="btn" type="button" id="setupBtn">הפעל ניקוי אוטומטי חודשי</button>
+      </div>
+      <div class="status" id="statusBox">טוען נתוני ארכיון...</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>לשוניות היסטוריה</h2>
+      </div>
+      <div class="archive-list" id="archiveList">
+        <div class="empty">אין נתונים להצגה</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycbyHuamBktw7ohK9BAYFScMCRKiZ56A5HgFnuSR6CnQ2Gq4AAsabcn14072yCPSqrNNHgA/exec";
+
+const els = {
+  activeCount: document.getElementById("activeCount"),
+  archivedCount: document.getElementById("archivedCount"),
+  sheetCount: document.getElementById("sheetCount"),
+  archiveList: document.getElementById("archiveList"),
+  statusBox: document.getElementById("statusBox"),
+  cutoffDate: document.getElementById("cutoffDate"),
+  archiveBtn: document.getElementById("archiveBtn"),
+  setupBtn: document.getElementById("setupBtn"),
+  refreshBtn: document.getElementById("refreshBtn"),
+  logoutBtn: document.getElementById("logoutBtn")
+};
+
+function firstDayOfCurrentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function setStatus(message, type) {
+  els.statusBox.textContent = message;
+  els.statusBox.className = `status ${type || ""}`.trim();
+}
+
+function setBusy(isBusy) {
+  els.archiveBtn.disabled = isBusy;
+  els.setupBtn.disabled = isBusy;
+  els.refreshBtn.disabled = isBusy;
+}
+
+async function api(action, params = {}) {
+  const url = new URL(SHEETS_URL);
+  url.searchParams.set("action", action);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, value);
+    }
+  });
+  url.searchParams.set("_", Date.now());
+  url.searchParams.set("callback", `yasouArchiveCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+
+  const data = await jsonp(url);
+  if (!data.ok) throw new Error(data.error || "הפעולה נכשלה");
+  return data;
+}
+
+function jsonp(url) {
+  const callbackName = url.searchParams.get("callback");
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("לא התקבלה תשובה מה־Apps Script"));
+    }, 120000);
+
+    function cleanup() {
+      window.clearTimeout(timer);
+      script.remove();
+      delete window[callbackName];
+    }
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("הדפדפן לא הצליח להתחבר ל־Apps Script"));
+    };
+
+    script.src = url.toString();
+    document.body.appendChild(script);
+  });
+}
+
+async function loadSummary() {
+  setBusy(true);
+  try {
+    const data = await api("getArchiveSummary");
+    els.activeCount.textContent = data.activeCount || 0;
+    els.archivedCount.textContent = data.totalArchived || 0;
+    els.sheetCount.textContent = (data.archiveSheets || []).length;
+    els.cutoffDate.value = els.cutoffDate.value || data.nextCutoffDate || firstDayOfCurrentMonth();
+    renderArchiveSheets(data.archiveSheets || []);
+    setStatus("הנתונים מעודכנים.", "ok");
+  } catch (error) {
+    console.error(error);
+    setStatus(`לא הצלחתי לטעון את נתוני הארכיון: ${error.message || error}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+function renderArchiveSheets(sheets) {
+  if (!sheets.length) {
+    els.archiveList.innerHTML = '<div class="empty">אין עדיין לשוניות ארכיון</div>';
+    return;
+  }
+
+  els.archiveList.innerHTML = sheets
+    .map((sheet) => `
+      <div class="archive-row">
+        <strong>${escapeHtml(sheet.name)}</strong>
+        <span>${Number(sheet.rows || 0).toLocaleString("he-IL")} רשומות</span>
+      </div>
+    `)
+    .join("");
+}
+
+async function archiveNow() {
+  const cutoffDate = els.cutoffDate.value || firstDayOfCurrentMonth();
+  setBusy(true);
+  setStatus("בודק כמה הזמנות יעברו לארכיון...");
+  try {
+    const preview = await api("previewArchive", { cutoffDate });
+    if (!preview.archived) {
+      setStatus("אין הזמנות ישנות להעברה לפי התאריך שבחרת.", "ok");
+      return;
+    }
+
+    const ok = confirm(`נמצאו ${preview.archived} הזמנות לפני ${cutoffDate}. להעביר אותן לארכיון ולמחוק מהדשבורד הפעיל?`);
+    if (!ok) {
+      setStatus("הפעולה בוטלה. לא נעשה שינוי בגיליון.", "ok");
+      return;
+    }
+
+    setStatus("מעביר הזמנות ישנות לארכיון...");
+    const data = await api("archiveOldReservations", { cutoffDate });
+    setStatus(`הועברו ${data.archived || 0} רשומות לארכיון. נשארו ${data.kept || 0} בדשבורד.`, "ok");
+    await loadSummary();
+  } catch (error) {
+    console.error(error);
+    setStatus(`לא הצלחתי לבצע ניקוי: ${error.message || error}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function setupMonthlyArchive() {
+  setBusy(true);
+  setStatus("מפעיל ניקוי חודשי אוטומטי...");
+  try {
+    await api("setupMonthlyArchive");
+    setStatus("הניקוי החודשי הופעל. הוא ירוץ בתחילת כל חודש.", "ok");
+  } catch (error) {
+    console.error(error);
+    setStatus(`לא הצלחתי להפעיל ניקוי חודשי: ${error.message || error}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem("yasouAdminToken");
+  sessionStorage.removeItem("yasouAdminUser");
+  window.location.replace("login.html");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+els.archiveBtn.addEventListener("click", archiveNow);
+els.setupBtn.addEventListener("click", setupMonthlyArchive);
+els.refreshBtn.addEventListener("click", loadSummary);
+els.logoutBtn.addEventListener("click", logout);
+els.cutoffDate.value = firstDayOfCurrentMonth();
+loadSummary();
+</script>
+</body>
+</html>
