@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -435,18 +436,42 @@ async function api(action, params = {}) {
     }
   });
   url.searchParams.set("_", Date.now());
+  url.searchParams.set("callback", `yasouArchiveCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    cache: "no-store",
-    redirect: "follow"
-  });
-
-  if (!response.ok) throw new Error(`API ${response.status}`);
-
-  const data = await response.json();
+  const data = await jsonp(url);
   if (!data.ok) throw new Error(data.error || "הפעולה נכשלה");
   return data;
+}
+
+function jsonp(url) {
+  const callbackName = url.searchParams.get("callback");
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("לא התקבלה תשובה מה־Apps Script"));
+    }, 30000);
+
+    function cleanup() {
+      window.clearTimeout(timer);
+      script.remove();
+      delete window[callbackName];
+    }
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("הדפדפן לא הצליח להתחבר ל־Apps Script"));
+    };
+
+    script.src = url.toString();
+    document.body.appendChild(script);
+  });
 }
 
 async function loadSummary() {
