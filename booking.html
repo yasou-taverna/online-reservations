@@ -1,4 +1,5 @@
 
+
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -299,7 +300,7 @@ textarea:focus {
   }
 
   .hero {
-    padding: 6px 12px; 
+    padding: 6px 12px;
   }
 
   .hero-logo {
@@ -727,10 +728,10 @@ async function handleReceipt(event) {
     return;
   }
 
-  const dataUrl = await readAsDataUrl(file);
+  const dataUrl = await resizeImageAsDataUrl(file);
   receipt = {
     name: file.name,
-    mimeType: file.type,
+    mimeType: "image/jpeg",
     dataUrl
   };
 
@@ -846,6 +847,31 @@ function readAsDataUrl(file) {
   });
 }
 
+function resizeImageAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = reject;
+      image.onload = () => {
+        const maxSize = 1200;
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function isValidPhone(value) {
   const phone = normalizePhone(value);
   const digitCount = phone.replace(/\D/g, "").length;
@@ -881,7 +907,5 @@ function showError(element, message) {
 
 init();
 </script>
-<script src="js/faq-data.js"></script>	
-<script src="js/chatbot.js"></script
 </body>
 </html>
