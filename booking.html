@@ -647,7 +647,7 @@ async function continueToPayment() {
       return;
     }
   } catch (error) {
-    showError(els.errorBox, "לא הצלחנו לבדוק זמינות. נא לנסות שוב בעוד רגע.");
+    showError(els.errorBox, `שגיאה בבדיקת זמינות: ${error.message || error}`);
     console.warn(error);
     return;
   } finally {
